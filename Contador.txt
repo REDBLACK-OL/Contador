@@ -1,0 +1,333 @@
+PLAN DE NEGOCIOS
+WordCount Pro — Aplicación Contadora de Palabras Inteligente
+
+Elaborado por: Estudiante de 3er Ciclo — Ingeniería de Sistemas
+Versión: 2.0
+Fecha: Mayo 2026
+Clasificación: Documento Académico-Profesional
+Ciudad: Pucallpa, Ucayali, Perú
+
+TABLA DE CONTENIDOS
+
+Resumen Ejecutivo
+Descripción del Negocio
+Problema, Solución y Casos de Uso
+Análisis del Entorno (PESTEL)
+Análisis de Mercado
+Análisis FODA
+Descripción del Producto y Servicio
+Modelo de Negocio (Business Model Canvas)
+Plan de Marketing y Ventas
+Plan Operativo y Tecnológico
+Plan Organizacional y Recursos Humanos
+Plan Financiero
+Gestión de Riesgos
+Indicadores Clave de Rendimiento (KPIs)
+Hoja de Ruta (Roadmap)
+Conclusiones y Recomendaciones
+
+
+1. RESUMEN EJECUTIVO
+CampoDetalleNombre del ProyectoWordCount ProTipo de ProductoAplicación web de análisis y conteo textualSectorTecnología Educativa (EdTech) / Productividad DigitalEtapaIdea / Prototipo inicialInversión estimadaS/ 2,904.00 en el primer añoPunto de equilibrioMes 5 del primer añoROI proyectado76.6% en el año 1
+El Problema
+Hoy en día, cuando un estudiante universitario termina de escribir su tesis, un traductor finaliza un documento o un redactor entrega un artículo, todos necesitan saber exactamente cuántas palabras, caracteres y párrafos contiene su texto. Sin embargo, las herramientas disponibles fallan en algo fundamental: están diseñadas para el inglés.
+Microsoft Word cuenta palabras, pero no distingue correctamente palabras con tildes, la eñe ni los signos de apertura propios del español. Google Docs tiene el mismo problema. Los contadores web gratuitos más conocidos como WordCounter.net están completamente en inglés y no ofrecen métricas útiles para el usuario hispanohablante. Herramientas avanzadas como Hemingway App o Grammarly directamente no soportan el español.
+El resultado es que millones de estudiantes, docentes, traductores y creadores de contenido en Perú y Latinoamérica usan herramientas que no fueron diseñadas para su idioma, obteniendo conteos inexactos y sin acceso a métricas que les ayudarían a mejorar su escritura.
+La Solución
+WordCount Pro es una herramienta web gratuita, sin instalación y sin registro obligatorio, que permite a cualquier persona contar y analizar su texto en español de forma precisa e instantánea.
+El usuario entra al sitio web, pega o escribe su texto, y en tiempo real ve cuántas palabras, caracteres, párrafos, oraciones y líneas tiene su documento. Además, en la versión premium, obtiene métricas avanzadas como el índice de legibilidad en español, densidad de palabras clave, tiempo estimado de lectura y comparación entre dos textos.
+A diferencia de la competencia, WordCount Pro está construido desde cero para el idioma español, procesando correctamente tildes, la eñe, signos de apertura y estructuras gramaticales propias del castellano.
+Propuesta de Valor
+
+"Brindamos a estudiantes, docentes, traductores y creadores de contenido hispanohablantes una herramienta de análisis textual precisa, rápida e intuitiva, accesible desde cualquier dispositivo, sin instalación y completamente adaptada al idioma español."
+
+Objetivos Estratégicos
+
+Lanzar el MVP (Producto Mínimo Viable) en el mes 3 del proyecto.
+Alcanzar 500 usuarios activos mensuales al cierre del primer año.
+Obtener al menos 65 suscriptores del plan premium en el año 1.
+Posicionarse como la herramienta de referencia en análisis textual para el ecosistema educativo peruano e hispanohablante.
+Recuperar la inversión total antes de finalizar el año 1.
+
+
+2. DESCRIPCIÓN DEL NEGOCIO
+2.1 Identificación del Proyecto
+CampoDatoNombre comercialWordCount ProNombre legal (futuro)WordCount Pro S.A.C.Domicilio fiscalPucallpa, Ucayali, PerúCorreo de contactocontacto@wordcountpro.pe (proyectado)Sitio webwww.wordcountpro.pe (proyectado)Tipo de empresaStartup tecnológica — EdTech / ProductividadRégimen tributarioRégimen MYPE Tributario (proyectado)
+2.2 Visión
+Ser la plataforma de análisis textual líder en el mercado hispanohablante para el año 2028, reconocida por su precisión, usabilidad e innovación en el procesamiento inteligente del lenguaje escrito en español.
+2.3 Misión
+Desarrollar y mantener herramientas de software accesibles y eficientes que faciliten el análisis textual a estudiantes, docentes y profesionales, impulsando la productividad escrita y el aprendizaje digital en Perú y Latinoamérica.
+2.4 Valores Corporativos
+
+Innovación continua: Mejora constante con tecnologías actuales.
+Accesibilidad: Herramienta útil para todos, sin barreras económicas.
+Precisión técnica: Resultados confiables y validados algorítmicamente.
+Educación como motor: Compromiso con el desarrollo del sector educativo.
+Transparencia: Precios claros, sin letra pequeña, sin engaños.
+
+2.5 Alcance del Proyecto (Fases)
+Fase 1 — Académica (meses 1–3): Desarrollo del MVP como proyecto universitario. Herramienta web básica con las funcionalidades core de conteo. Validación interna con usuarios del entorno universitario de Pucallpa.
+Fase 2 — Validación (meses 4–6): Lanzamiento beta para usuarios reales. Recolección de feedback. Ajustes de UI/UX y corrección de errores. Implementación del sistema de registro y autenticación de usuarios.
+Fase 3 — Comercialización (meses 7–12): Implementación del modelo freemium. Lanzamiento del plan premium. Estrategia de marketing digital activa. Alianzas con universidades.
+Fase 4 — Escalabilidad (año 2 en adelante): API pública, integraciones con LMS (Moodle, Canvas), app móvil Android/iOS, y funciones de inteligencia artificial para análisis de calidad textual en español.
+
+3. PROBLEMA, SOLUCIÓN Y CASOS DE USO
+3.1 El Problema en Detalle
+Los usuarios hispanohablantes que producen texto digital enfrentan cuatro problemas concretos que ninguna herramienta actual resuelve completamente:
+Problema 1 — Contadores básicos e incompletos: Las herramientas actuales solo muestran el número de palabras y caracteres. No ofrecen métricas útiles como densidad léxica, índice de legibilidad, palabras más frecuentes ni tiempo estimado de lectura. Por ejemplo, un estudiante que debe entregar un ensayo de exactamente 1,500 palabras usa Microsoft Word para contar, pero Word no le dice si su texto es demasiado complejo para el lector ni cuáles palabras está repitiendo en exceso.
+Problema 2 — Falta de localización en español: Los contadores web más conocidos (WordCounter.net, Hemingway App) están optimizados para el inglés. No procesan correctamente tildes (canción, árbol, fácil), la eñe (mañana, español, niña), los signos de apertura (¿ ¡) ni las palabras compuestas con guión (bien-estar, franco-peruano). Esto genera conteos inexactos que afectan directamente a traductores que cobran por palabra y a estudiantes con límites de extensión.
+Problema 3 — Sin herramientas para docentes: Los docentes no tienen forma de crear un perfil de análisis personalizado con límites de palabras específicos y compartirlo con sus alumnos para que verifiquen sus trabajos antes de entregar.
+Problema 4 — Sin integración con el flujo de trabajo: No existe una herramienta en español que permita subir archivos .docx o .pdf y obtener un reporte exportable de las métricas textuales.
+3.2 La Solución
+WordCount Pro resuelve cada uno de estos problemas de la siguiente manera:
+
+Ofrece no solo conteo básico, sino un panel completo de métricas: palabras, caracteres, párrafos, oraciones, líneas, tiempo de lectura, densidad léxica, índice de legibilidad e identificación de palabras frecuentes. Todo en una sola pantalla y en tiempo real.
+El motor de análisis fue construido específicamente para el español. Usa tokenización con soporte UTF-8 completo, expresiones regulares adaptadas a la gramática hispana y la fórmula Fernández-Huerta para medir legibilidad en español (no en inglés como Flesch-Kincaid).
+El plan institucional permite al docente crear perfiles de análisis con límites personalizados (mínimo y máximo de palabras) y generar un enlace compartible para que los alumnos verifiquen sus trabajos antes de entregar.
+La versión premium permite subir archivos .txt, .docx y .pdf directamente, y exportar el reporte de métricas en PDF o Excel para guardar o compartir.
+
+3.3 Casos de Uso Principales
+Caso de Uso 1 — Estudiante verifica extensión de su ensayo:
+Un estudiante universitario pega su ensayo de 1,200 palabras en WordCount Pro. El sistema muestra el conteo en tiempo real, el índice de legibilidad y las palabras más repetidas. El estudiante sabe si cumple el mínimo requerido por su profesor y si su texto es comprensible para el lector.
+Caso de Uso 2 — Traductor verifica conteo para facturación:
+Un traductor freelance sube el archivo .docx del documento traducido. El sistema procesa el archivo y devuelve el conteo exacto de palabras y caracteres, considerando correctamente el español. El traductor obtiene el número exacto para facturar.
+Caso de Uso 3 — Docente crea perfil de análisis para sus alumnos:
+Un docente universitario (plan institucional) crea un perfil con límite de 800 a 1,000 palabras y comparte el enlace con sus alumnos vía WhatsApp o email. Los alumnos pegan su texto en el enlace y ven instantáneamente si cumplen los requisitos antes de entregar. El docente reduce la cantidad de trabajos fuera de formato.
+Caso de Uso 4 — Blogger optimiza artículo para SEO:
+Un creador de contenido digital pega su artículo de blog en WordCount Pro. El sistema muestra la densidad de palabras clave y el tiempo de lectura. El blogger ajusta la densidad de su keyword principal para optimizar el posicionamiento en Google.
+
+4. ANÁLISIS DEL ENTORNO (PESTEL)
+El análisis PESTEL identifica los factores externos que pueden impactar el desarrollo y éxito de WordCount Pro en el mercado peruano y latinoamericano.
+4.1 Factores Políticos
+(+) El gobierno peruano promueve la digitalización educativa mediante el programa "Aprendo en Casa" y políticas del MINEDU que incentivan el uso de tecnología en aulas de todo el país.
+(+) Existen incentivos tributarios para startups tecnológicas bajo la Ley N.° 30309 que promueve la investigación, desarrollo e innovación tecnológica, con deducción adicional del 175% ante CONCYTEC.
+(–) La inestabilidad política peruana puede generar incertidumbre en inversiones y financiamiento público para proyectos tecnológicos.
+4.2 Factores Económicos
+(+) El mercado global de EdTech supera los USD 340 mil millones proyectados para 2025 con crecimiento sostenido (fuente: HolonIQ, 2023).
+(+) El costo de desarrollo con tecnologías open-source (React, Python, PostgreSQL) es bajo, permitiendo un margen de ganancia alto desde las primeras etapas del proyecto.
+(–) El poder adquisitivo del usuario peruano promedio limita la disposición a pagar por software, por lo que el modelo freemium es indispensable para atraer usuarios antes de cobrar.
+(–) La inflación y el tipo de cambio afectan costos de hosting y servicios en la nube cotizados en dólares (Railway, AWS, Vercel).
+4.3 Factores Sociales
+(+) Perú cuenta con más de 1.5 millones de estudiantes universitarios en universidades públicas y privadas (fuente: MINEDU — ESCALE 2023).
+(+) El auge del trabajo remoto, el freelancing y el marketing de contenidos genera demanda creciente de herramientas de productividad textual.
+(+) Mayor conciencia sobre la importancia de la originalidad académica y el control estricto de la extensión en trabajos universitarios.
+(–) La brecha digital en zonas rurales y ciudades medianas limita el alcance inicial del producto fuera de los principales centros urbanos.
+4.4 Factores Tecnológicos
+(+) Disponibilidad de frameworks modernos (React, FastAPI) que aceleran significativamente el desarrollo del producto.
+(+) El avance de la Inteligencia Artificial y el NLP abre oportunidades para análisis textual avanzado en español en versiones futuras del producto.
+(+) La infraestructura cloud gratuita (Vercel, Railway, Supabase free tier) permite desplegar el MVP a costo casi cero en la etapa inicial.
+(–) La velocidad del cambio tecnológico exige actualizaciones constantes del producto para no quedar obsoleto frente a competidores.
+4.5 Factores Ecológicos
+(+) WordCount Pro es un producto 100% digital, sin huella de carbono física directa. Promueve el uso de documentos digitales frente al papel.
+(+) El uso de servidores en la nube con certificaciones de energía renovable (Google Cloud, AWS) reduce el impacto ambiental del producto.
+4.6 Factores Legales
+(+) Marco legal favorable en Perú para la constitución de empresas SAC digitales bajo la normativa vigente de la SUNARP.
+(+) La Ley N.° 30309 ofrece deducción tributaria adicional del 175% para proyectos de innovación tecnológica registrados ante CONCYTEC.
+(–) Se debe cumplir con la Ley N.° 29733 de Protección de Datos Personales en el manejo de datos de usuarios que suban textos a la plataforma.
+(–) Necesidad de licenciamiento claro del software y términos de uso para evitar disputas de propiedad intelectual con terceros.
+
+5. ANÁLISIS DE MERCADO
+5.1 Tamaño y Segmentación del Mercado
+Mercado Total Disponible (TAM): Todos los usuarios hispanohablantes con acceso a internet que producen texto digital: estudiantes, docentes, escritores, periodistas, traductores y creadores de contenido digital. El Instituto Cervantes (2023) estima 500 millones de hispanohablantes. Con una penetración de internet del 70% en Latinoamérica (CEPAL 2023), el mercado potencial supera los 15 millones de usuarios activos de herramientas de escritura y productividad textual digital. Estimado TAM: ~15 millones de usuarios potenciales.
+Mercado Disponible para el Servicio (SAM): Usuarios hispanohablantes en Perú, Colombia, México y Argentina que utilizan herramientas de productividad textual activamente. Cálculo: 15% del TAM con acceso y disposición a usar herramientas web. Estimado SAM: ~2.25 millones de usuarios.
+Mercado Objetivo Inicial (SOM): Estudiantes universitarios y profesionales de contenido en Perú, principalmente en Lima, Pucallpa, Arequipa y Trujillo. Cálculo: 1% del SAM como meta realista para el primer año. Meta año 1: 500 usuarios activos mensuales.
+5.2 Segmentos de Clientes
+Segmento A — Estudiantes universitarios (prioritario): Alumnos de 18 a 30 años que redactan tesis, ensayos e informes. Necesitan controlar la extensión mínima y máxima requerida por docentes. Frecuencia de uso alta, varias veces por semana en épocas de exámenes. Prefieren la versión gratuita; algunos pagarían plan premium. Tamaño en Perú: más de 1.5 millones de estudiantes universitarios (MINEDU 2023).
+Segmento B — Docentes y educadores: Profesores que revisan trabajos y establecen límites de palabras. Necesitan verificar que los entregables cumplen requisitos de extensión. Frecuencia media, uso por ciclo académico. Mayor disposición a pagar por funciones institucionales.
+Segmento C — Traductores y redactores profesionales: Freelancers que cobran por palabra o carácter traducido. Necesitan conteo preciso en español para facturación y control de entregas. Frecuencia muy alta, uso diario. Alta disposición a pagar; el ahorro de tiempo justifica una suscripción mensual.
+Segmento D — Creadores de contenido digital: Bloggers, copywriters, community managers, youtubers con guiones. Necesitan optimizar la longitud de contenido para SEO y plataformas sociales. Frecuencia alta. Disposición media-alta; valoran herramientas integradas en su flujo de trabajo.
+5.3 Análisis de la Competencia
+CompetidorFortalezaDebilidadDiferencial de WordCount ProMicrosoft WordAmpliamente conocido, disponible offlineSolo métricas básicas; requiere licencia de pagoMás métricas, multiplataforma, sin licenciaWordCounter.netGratuito, accesible vía web, sin registroEn inglés, sin localización para españolEspañol nativo, mejor UXGoogle DocsIntegrado al flujo del usuarioSolo funciona dentro de Google DocsFunciona con cualquier texto de cualquier fuenteHemingway AppAnálisis de legibilidad y sugerencias de estiloSolo en inglés, tiene costo en versión desktopEnfoque en español con menor precio
+5.4 Tendencias del Mercado
+
+Integración de IA (ChatGPT, Gemini) en herramientas de escritura digital.
+Crecimiento de plataformas LMS (Moodle, Canvas) que demandan integración con herramientas externas vía API.
+Mayor demanda de análisis de legibilidad y calidad textual por plataformas de contenido como Medium, Substack y LinkedIn.
+Incremento del freelancing y trabajo remoto genera nuevos usuarios de herramientas de productividad digital en Latinoamérica.
+
+
+6. ANÁLISIS FODA
+6.1 Fortalezas (Factores internos positivos)
+
+F1. Bajo costo de desarrollo inicial usando tecnologías open-source.
+F2. Algoritmos de conteo precisos implementables con Python y JavaScript.
+F3. Producto digital sin costos de manufactura, inventario ni distribución.
+F4. Interfaz web accesible desde cualquier dispositivo con navegador.
+F5. Motor de análisis construido específicamente para el idioma español.
+F6. Equipo con conocimientos técnicos en programación (Python, JS, HTML/CSS).
+
+6.2 Debilidades (Factores internos negativos)
+
+D1. Equipo pequeño en etapa inicial (1–2 desarrolladores).
+D2. Presupuesto de marketing muy limitado en la fase inicial.
+D3. Funcionalidades básicas en la versión 1.0; curva de mejora necesaria.
+D4. Sin marca establecida ni reputación en el mercado aún.
+D5. Dependencia de conectividad a internet para la versión web.
+D6. Experiencia comercial limitada en el equipo fundador.
+
+6.3 Oportunidades (Factores externos positivos)
+
+O1. Mercado educativo en crecimiento constante en Perú y Latinoamérica.
+O2. Escasa competencia directa en español con funciones avanzadas.
+O3. Posibilidad de monetización vía API para plataformas educativas LMS.
+O4. Integración futura con IA para análisis de calidad textual en español.
+O5. Alianzas estratégicas con universidades e institutos educativos.
+O6. Expansión hacia mercados de habla hispana fuera de Perú.
+
+6.4 Amenazas (Factores externos negativos)
+
+A1. Microsoft y Google pueden mejorar sus contadores integrados en español.
+A2. Barreras de adopción: usuarios tienen hábitos establecidos con Word.
+A3. Aparición de competidores con mayor financiamiento en el mismo nicho.
+A4. Cambios rápidos en tecnología web exigen actualizaciones costosas.
+A5. Riesgo de copia del concepto del producto por competidores.
+
+6.5 Estrategias Derivadas del FODA
+Estrategia FO (Fortalezas + Oportunidades): Aprovechar el bajo costo de desarrollo (F1) para lanzar rápido (O2) y posicionarse en el mercado hispanohablante antes que llegue competencia directa. Usar la localización en español (F5) como ventaja diferencial.
+Estrategia FA (Fortalezas + Amenazas): Diferenciarse con métricas avanzadas y localización profunda en español (F2, F5) para que el usuario no encuentre la misma propuesta en Word o Google (A1), creando barreras de cambio desde la versión gratuita.
+Estrategia DO (Debilidades + Oportunidades): Compensar el presupuesto limitado (D2) con marketing orgánico: SEO, comunidades estudiantiles y alianzas universitarias (O5) para crecer sin depender de publicidad pagada en las primeras etapas.
+Estrategia DA (Debilidades + Amenazas): Fidelizar usuarios tempranos con experiencia superior (D4, A2) para crear lealtad antes de que lleguen competidores con más recursos (A3). Documentar y proteger la propiedad intelectual ante INDECOPI.
+
+7. DESCRIPCIÓN DEL PRODUCTO Y SERVICIO
+7.1 Descripción General
+WordCount Pro es una aplicación web que permite a los usuarios analizar cualquier texto escrito y obtener estadísticas detalladas de forma instantánea. El usuario puede escribir directamente, pegar texto copiado o subir un archivo (.txt, .docx, .pdf) y obtener todos los resultados sin instalación alguna.
+7.2 Funcionalidades del Producto
+Módulo 1 — Conteo Básico (versión gratuita, sin registro):
+Total de palabras, caracteres con espacios, caracteres sin espacios, total de párrafos, oraciones y líneas, tiempo estimado de lectura (200 palabras/minuto promedio), tiempo estimado de narración en voz alta, y actualización en tiempo real mientras el usuario escribe.
+Módulo 2 — Análisis Avanzado (versión premium):
+Densidad de palabras clave (frecuencia de términos), palabras únicas vs. palabras repetidas, índice de legibilidad Fernández-Huerta para español, nube de palabras con las más frecuentes del texto, longitud promedio de oración y párrafo, porcentaje de palabras de relleno detectadas, y modo comparación para analizar dos textos y comparar sus métricas.
+Módulo 3 — Soporte de Archivos (premium):
+Carga de archivos .txt, .docx, .pdf, .odt y .rtf, exportación de estadísticas en PDF o Excel, e historial de análisis guardados en la nube por 90 días.
+Módulo 4 — Herramientas para Docentes (plan institucional):
+Creación de perfiles de análisis con límites personalizados, enlace compartible para que alumnos verifiquen sus textos, reporte grupal de múltiples textos analizados, y panel de administrador institucional con gestión de usuarios.
+7.3 Diferenciadores Clave
+
+Español nativo: Motor de conteo construido específicamente para el español. Procesa tildes, eñe, signos de apertura y palabras compuestas correctamente.
+Sin registro para uso básico: La versión gratuita es inmediatamente accesible sin crear cuenta, eliminando la fricción de adopción inicial.
+Tiempo real: El conteo se actualiza mientras el usuario escribe o pega texto, sin necesidad de hacer clic en ningún botón de calcular.
+Interfaz limpia: Diseño minimalista centrado en el usuario, sin publicidad invasiva en la versión gratuita.
+API pública (año 2): Permite a desarrolladores y plataformas LMS integrar el motor de conteo en sus propios sistemas.
+
+7.4 Ciclo de Vida del Producto
+EtapaEstadoEtapa actualDesarrollo e introducción (MVP)Próxima etapaCrecimiento (validación de mercado con usuarios reales)Visión a 3 añosMadurez (producto consolidado con múltiples fuentes de ingresos)
+
+8. MODELO DE NEGOCIO (BUSINESS MODEL CANVAS)
+SOCIOS CLAVEACTIVIDADES CLAVEPROPUESTA DE VALORRELACIÓN CON CLIENTESSEGMENTOS DE CLIENTESProveedores cloud (Railway, Vercel)Desarrollo de softwareHerramienta de análisis textual precisa, rápida y en español puroAutoservicio web sin fricciónEstudiantes universitariosUniversidades aliadasMantenimiento y soporteSoporte vía chatDocentesDocentes aliadosMarketing y SEOComunidad DiscordTraductoresPasarela de pagos Culqi / StripeEmail marketingCreadores de contenido
+RECURSOS CLAVECANALESMotor NLP españolWeb propiaInfraestructura cloud escalableRedes socialesEquipo técnicoSEO orgánicoMarca y diseño UXReferidos
+ESTRUCTURA DE COSTOSFUENTES DE INGRESOSHosting y dominioSuscripción Premium S/ 15/mesDesarrollo y mantenimientoPlan anual S/ 120/añoMarketing digitalPlan institucional S/ 199/mesPasarela de pagos (3% por transacción)API pago por uso (año 2)Licencias de software de tercerosPublicidad no intrusiva (futuro)
+8.1 Modelo de Ingresos Detallado
+Plan Gratuito (Freemium): S/ 0.00/mes. Textos de hasta 5,000 palabras por análisis. Incluye conteo básico (módulo 1), sin historial guardado. Objetivo: adquisición masiva de usuarios y prueba del producto.
+Plan Premium (Individual): S/ 15.00/mes o S/ 120.00/año (33% de descuento). Sin límite de palabras por análisis. Módulos 1, 2 y 3 completos. Historial de 90 días, exportación de reportes y soporte prioritario.
+Plan Institucional (Colegios y Universidades): S/ 199.00/mes (hasta 100 usuarios activos). Todo el Plan Premium más Módulo 4 (herramientas docentes), panel de administrador, reporte grupal y logo institucional.
+API Developer (Año 2): S/ 0.05 por cada 1,000 palabras procesadas vía API. Objetivo: integración con plataformas LMS y herramientas de terceros.
+
+9. PLAN DE MARKETING Y VENTAS
+9.1 Estrategia General
+La estrategia se basa en Growth Hacking con presupuesto mínimo, aprovechando canales orgánicos y comunidades digitales existentes para crecer sin depender de publicidad pagada en las primeras etapas del proyecto.
+9.2 Canales de Marketing
+Canal 1 — SEO (Search Engine Optimization): Meta: aparecer en los primeros 5 resultados de Google para términos como "contador de palabras online", "contar palabras en español" y "contador de caracteres gratis". Tácticas: optimización on-page, blog de contenidos, link building desde foros universitarios y comunidades de escritura en español. Resultados orgánicos visibles a partir del mes 4 al 6.
+Canal 2 — Redes Sociales: Plataformas: TikTok, Instagram, Facebook y LinkedIn. Contenido: tips de escritura, retos de conteo, memes educativos, casos de uso para traductores y grupos universitarios. Frecuencia: 3 a 4 publicaciones por semana. Meta mes 6: 2,000 seguidores combinados entre todas las plataformas.
+Canal 3 — Email Marketing: Herramienta: Mailchimp (plan gratuito hasta 500 contactos). Newsletter quincenal con tips de escritura y novedades. Campaña de upgrade a Premium para usuarios del plan gratuito.
+Canal 4 — Programa de Referidos: Por cada amigo registrado y activo, el referidor obtiene 15 días gratis de plan Premium. Objetivo: crecimiento viral orgánico en comunidades estudiantiles.
+Canal 5 — Alianzas con Docentes: Ofrecer Plan Premium gratuito a docentes a cambio de que recomienden la herramienta a sus alumnos. Meta: 20 docentes aliados durante el primer semestre.
+9.3 Embudo de Ventas (Funnel)
+
+Awareness: El usuario descubre WordCount Pro vía Google, redes sociales o por recomendación de un amigo o docente. KPI: visitas únicas al sitio web por mes.
+Consideration: El usuario prueba la herramienta gratuita sin registro. KPI: tasa de rebote menor al 40%; tiempo en sitio mayor a 2 minutos.
+Conversion: El usuario se registra o actualiza a Plan Premium. KPI: tasa de conversión freemium a premium mayor o igual al 5%.
+Retención: El usuario sigue usando la herramienta cada mes. KPI: tasa de retención mensual mayor o igual al 80%.
+Recomendación: El usuario recomienda WordCount Pro a otros. KPI: Net Promoter Score (NPS) mayor a 40.
+
+9.4 Estrategia de Precios
+Estrategia aplicada: penetración de mercado. Versión gratuita generosa para capturar cuota de mercado rápidamente. Precio premium accesible (S/ 15/mes) adaptado al poder adquisitivo peruano. Descuento del 33% por suscripción anual para incentivar compromiso a largo plazo. Plan institucional con precio por volumen para escalar ingresos B2B.
+9.5 Proyección de Usuarios y Ventas (Año 1)
+MesUsuarios TotalesUsuarios PremiumIngresos EstimadosMes 1500S/ 0.00Mes 21202S/ 30.00Mes 32005S/ 75.00Mes 430010S/ 150.00Mes 538015S/ 225.00Mes 645022S/ 330.00Mes 750030S/ 450.00Mes 856038S/ 570.00Mes 962045S/ 675.00Mes 1070052S/ 780.00Mes 1178058S/ 870.00Mes 1285065S/ 975.00TOTAL850 usuarios activos65 premiumS/ 5,130.00
+
+10. PLAN OPERATIVO Y TECNOLÓGICO
+10.1 Stack Tecnológico Justificado
+Frontend — Interfaz de Usuario: React.js con TypeScript, estilos con Tailwind CSS. React permite la actualización del conteo en tiempo real sin recargar la página, lo que es fundamental para la experiencia del usuario.
+Backend — Lógica de Negocio y API: Python con FastAPI. Es de alto rendimiento para procesamiento de texto y tiene soporte nativo para librerías NLP en Python como NLTK y spaCy, fundamentales para el análisis en español.
+Base de Datos: PostgreSQL gestionado en Supabase (plan gratuito inicial) y Redis para caché de resultados frecuentes y sesiones activas. PostgreSQL es robusto, open-source y ampliamente documentado.
+Infraestructura: Frontend en Vercel (plan gratuito, despliegue automático desde GitHub), backend en Railway (plan starter, aprox. S/ 30/mes), CDN/seguridad con Cloudflare (plan gratuito para caché y protección DDoS), dominio .pe (aprox. S/ 80 primer año).
+10.2 Infraestructura de Seguridad
+El producto cumplirá con los siguientes estándares de seguridad: HTTPS obligatorio en todas las comunicaciones (SSL vía Let's Encrypt), textos analizados no almacenados sin consentimiento explícito del usuario, autenticación con JWT y refresh tokens, hashing de contraseñas con bcrypt (factor de costo 12), rate limiting de máximo 100 solicitudes por minuto por IP, cumplimiento con la Ley N.° 29733 de Protección de Datos Personales del Perú, backups automáticos de base de datos cada 24 horas con retención de 7 días, y validación y sanitización de inputs para prevenir XSS e inyección SQL.
+
+11. PLAN ORGANIZACIONAL Y RECURSOS HUMANOS
+11.1 Estructura del Equipo (Etapa Inicial)
+En la etapa académica y de MVP, el equipo es reducido y multifuncional. Una sola persona puede asumir varios roles inicialmente. La estructura parte del Fundador / Líder de Proyecto (Estudiante de Ingeniería de Sistemas), quien coordina tres áreas: Desarrollo Backend/Frontend, Diseño UX/UI, y Marketing & Ventas.
+11.2 Perfiles de Rol
+Rol 1 — Desarrollador Backend / Líder Técnico: Responsable de la arquitectura, motor de análisis textual, API REST, base de datos, seguridad y despliegue en cloud. Habilidades requeridas: Python/FastAPI, SQL/PostgreSQL, Git, Docker básico. Dedicación de 20 a 30 horas por semana durante etapa MVP.
+Rol 2 — Desarrollador Frontend / UI: Responsable de la interfaz de usuario, integración con API, responsividad y experiencia de usuario (UX). Habilidades requeridas: React.js, TypeScript, Tailwind CSS, Figma. Dedicación de 15 a 20 horas por semana.
+Rol 3 — Marketing Digital (puede ser el fundador inicialmente): Responsable de redes sociales, SEO, email marketing y alianzas con docentes universitarios. Habilidades requeridas: redacción de contenido, Canva, Mailchimp, Google Analytics. Dedicación de 5 a 10 horas por semana.
+11.3 Plan de Crecimiento del Equipo
+
+Año 1: Equipo fundador de 1 a 2 personas multifuncionales.
+Año 2: Incorporar 1 diseñador UX/UI y 1 especialista en marketing digital.
+Año 3: Equipo de soporte al cliente y 1 desarrollador adicional para la API.
+
+12. GESTIÓN DE RIESGOS
+12.1 Matriz de Riesgos
+RiesgoProbabilidadImpactoNivelEstrategia de MitigaciónR1. Baja adopción inicial (pocos usuarios)AltaAltoCRÍTICOPlan de referidos + alianzas con docentes universitariosR2. Competidor lanza versión en españolMediaAltoALTODiferenciar con localización en español y métricas únicasR3. Caída del servicio cloud / downtimeBajaAltoMEDIOArquitectura con alta disponibilidad, monitoreo con UptimeRobotR4. Falta de tiempo del equipo fundadorAltaMedioALTODividir en hitos pequeños con metodología ágil (sprints)R5. Fuga de datos de usuariosBajaMuy AltoALTOHTTPS, no almacenar textos sin consentimiento, auditoríasR6. Cambios en precios de servicios cloudMediaMedioMEDIOUsar múltiples proveedores y free tiers inicialmenteR7. Deuda técnica acumuladaMediaMedioMEDIOBuenas prácticas, code reviews y documentación continua
+12.2 Plan de Contingencia Crítico (R1 — Baja Adopción)
+Si al mes 4 no se alcanzan los 200 usuarios proyectados, se activará el siguiente plan de contingencia:
+
+Campaña intensiva en grupos de Facebook de estudiantes universitarios.
+Ofrecer 1 mes de Premium gratis a los primeros 50 usuarios registrados.
+Buscar un docente con presencia en redes sociales para una colaboración de prueba gratuita a cambio de difusión entre sus alumnos.
+Revisar el proceso de onboarding para asegurar que el valor del producto sea visible en los primeros 30 segundos de uso.
+Realizar entrevistas con 10 usuarios potenciales para identificar fricciones en la adopción del producto.
+
+
+13. INDICADORES CLAVE DE RENDIMIENTO (KPIs)
+13.1 KPIs de Producto
+KPIMeta Año 1Frecuencia de MediciónUsuarios activos mensuales (MAU)≥ 500MensualUsuarios premium activos≥ 65MensualTasa de conversión free-premium≥ 5%MensualTasa de retención mensual≥ 80%MensualTasa de churn mensual≤ 8%MensualNPS (Net Promoter Score)≥ 40TrimestralTiempo promedio de sesión≥ 3 minMensual
+13.2 KPIs Técnicos
+KPIMetaFrecuenciaTiempo de respuesta del servicio< 200 msSemanalDisponibilidad del servicio≥ 99.5%Diaria (monitoreo)Bugs críticos en producción= 0ContinuaTiempo de resolución de bugs< 48 horasPor incidente
+13.3 KPIs Financieros
+KPIMeta Año 1FrecuenciaIngresos mensuales recurrentes≥ S/ 975MensualCosto de adquisición por cliente≤ S/ 8.00TrimestralValor de vida del cliente (LTV)≥ S/ 90.00SemestralPunto de equilibrio alcanzadoMes 5Seguimiento mensualROI del proyecto≥ 70%Anual
+
+14. HOJA DE RUTA (ROADMAP)
+Semestre 1 (Meses 1 al 6) — Construcción y Validación
+Mes 1: Definición de requerimientos funcionales y no funcionales. Diseño de wireframes y prototipos en Figma. Configuración del entorno de desarrollo (Git, IDE, frameworks). Diseño del esquema de base de datos versión 1.
+Mes 2: Desarrollo del motor de análisis textual (algoritmos en Python). Desarrollo del frontend básico (editor + panel de métricas). Integración inicial frontend-backend (API REST v1).
+Mes 3: Ejecución del plan de pruebas. Despliegue del MVP en Vercel y Railway. Lanzamiento beta privada (10 a 20 usuarios de confianza). Recolección de feedback y ajustes de UX.
+Mes 4: Corrección de bugs reportados en el beta. Implementación del sistema de registro y login. Desarrollo del módulo de historial de análisis. Lanzamiento beta pública (versión 0.9).
+Mes 5: Implementación del modelo freemium (límites por plan). Integración con pasarela de pagos Culqi o Stripe. Primera campaña de marketing en redes sociales. Primeras 5 alianzas con docentes universitarios.
+Mes 6: Lanzamiento oficial de WordCount Pro v1.0. Activación del programa de referidos. Publicación del primer artículo SEO en el blog. Evaluación de todas las métricas del semestre 1.
+Semestre 2 (Meses 7 al 12) — Crecimiento y Optimización
+Meses 7 y 8: Implementación del módulo de análisis avanzado (legibilidad, nubes de palabras). Soporte para carga de archivos .docx y .pdf. Optimización de velocidad del motor (benchmarking y mejoras).
+Meses 9 y 10: Lanzamiento del Plan Institucional para universidades. Campaña de alianzas con universidades en Pucallpa y Lima. Blog: 8 artículos SEO publicados en total.
+Meses 11 y 12: Desarrollo del módulo de exportación de reportes (PDF y Excel). Evaluación anual: métricas, ingresos y lecciones aprendidas. Planificación del Año 2 (app móvil, integración LMS, IA).
+Año 2 — Visión de Escalabilidad
+
+Lanzamiento de app móvil para Android e iOS con React Native.
+API pública documentada y disponible para desarrolladores externos.
+Integración con Moodle y Canvas mediante plugins LMS.
+Funciones de IA: sugerencias de estilo y detección de repeticiones.
+Expansión a Colombia y México como nuevos mercados objetivo.
+Búsqueda de financiamiento: CONCYTEC, incubadoras, angel investors.
+
+
+15. CONCLUSIONES Y RECOMENDACIONES
+15.1 Conclusiones
+
+Viabilidad del Problema: Existe un problema real y documentado en el mercado hispanohablante. Los contadores de palabras disponibles no están optimizados para el español y dejan desatendido un nicho con millones de usuarios potenciales en Perú y Latinoamérica.
+Viabilidad Técnica: WordCount Pro es técnicamente viable con el stack seleccionado (React, FastAPI, PostgreSQL), todas tecnologías open-source con amplia documentación y comunidad de soporte activa.
+Viabilidad Financiera: Con una inversión inicial de S/ 2,904.00 el proyecto alcanza su punto de equilibrio en el mes 5 y genera un ROI positivo del 76.6% en el primer año de operación.
+Viabilidad Comercial: Existe un nicho real y desatendido para herramientas de análisis textual en español. La competencia actual no satisface las necesidades específicas del usuario hispanohablante.
+Escalabilidad: El modelo freemium, la API pública y los planes institucionales abren múltiples fuentes de ingresos para crecer de forma sostenida hacia el mercado latinoamericano desde el año 2.
+Relevancia Académica: WordCount Pro permite aplicar de forma integral conocimientos de algoritmos, bases de datos, desarrollo web, gestión de proyectos y emprendimiento tecnológico.
+
+16.2 Recomendaciones
+
+Empezar simple: Desarrollar el MVP con funcionalidades core antes de agregar características avanzadas. Lanzar rápido e iterar con feedback real reduce riesgos y acelera el aprendizaje.
+Validar antes de construir todo: Antes de invertir en desarrollo completo, validar la demanda con una landing page que permita a usuarios registrar su interés en una lista de espera.
+Priorizar el SEO desde el día 1: El tráfico orgánico desde Google es el canal más rentable a largo plazo para este tipo de herramientas web.
+Documentar todo: Tanto el código (con comentarios y README actualizado) como las decisiones de diseño (Architecture Decision Records, ADRs).
+Buscar un mentor técnico: Acercarse a docentes o profesionales con experiencia en desarrollo web para revisar el producto antes de que el proyecto sea demasiado grande para modificar sin costo alto.
+Registrar la marca: Una vez lanzado el MVP, registrar "WordCount Pro" en INDECOPI para proteger la identidad del producto.
+Metodología ágil: Trabajar en sprints de 2 semanas con entregables concretos. Usar tableros Kanban en Trello o Notion para visualizar el avance del proyecto en todo momento.
+
+Plan de Negocios: WordCount Pro — Contador de Palabras Inteligente
+Versión 2.0 | Mayo 2026 | Pucallpa, Ucayali, Perú
+Elaborado como Proyecto Académico — 3er Ciclo, Desarrollo de  Sistemas
