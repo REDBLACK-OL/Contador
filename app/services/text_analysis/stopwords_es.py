@@ -1,0 +1,31 @@
+# Lista de palabras vacías (stopwords) en español para la densidad de palabras clave
+# BR-028: La densidad de palabras clave excluye stopwords en español.
+SPANISH_STOPWORDS = {
+    "a", "al", "algo", "algunas", "algunos", "ante", "antes", "como", "con", "contra",
+    "cual", "cuando", "de", "del", "desde", "donde", "durante", "e", "el", "ella", "ellas",
+    "ellos", "en", "entre", "era", "erais", "eran", "eras", "eres", "es", "esa", "esas",
+    "ese", "esos", "esta", "estaba", "estabais", "estaban", "estabas", "estad", "estada",
+    "estadas", "estado", "estados", "estamos", "estando", "estar", "estaremos", "estará",
+    "estarán", "estarás", "estaré", "estaréis", "estaría", "estaríais", "estaríamos",
+    "estarían", "estarías", "estas", "este", "estemos", "estos", "estoy", "estuve",
+    "estuviese", "estuviesen", "estuvieses", "estuvimos", "estuviste", "estuvisteis",
+    "estuvo", "está", "estábamos", "estáis", "están", "estás", "esté", "estéis", "estén",
+    "estés", "fue", "fuera", "fuerais", "fueran", "fueras", "fueron", "fuese", "fuesen",
+    "fueses", "fui", "fuimos", "fuiste", "fuisteis", "fuesemos", "fueramos", "fueseis",
+    "fuyo", "fuyos", "fuyas", "fuya", "fuyamos", "fuyas", "fuye", "fuyen", "fuyo", "fuye",
+    "fué", "he", "hemos", "han", "has", "hay", "hasta", "la", "las", "le", "les", "lo",
+    "los", "me", "mi", "mis", "mucho", "muchos", "muy", "más", "nos", "nosotras", "nosotros",
+    "nuestra", "nuestras", "nuestro", "nuestros", "o", "os", "otra", "otras", "otro", "otros",
+    "para", "pero", "poco", "por", "que", "qué", "se", "sen", "ser", "seremos", "será",
+    "serán", "serás", "seré", "seréis", "sería", "seríais", "seríamos", "serían", "serías",
+    "si", "sin", "sobre", "sois", "somos", "son", "soy", "su", "sus", "suya", "suyas",
+    "suyo", "suyos", "sí", "también", "tanto", "te", "tendremos", "tendrá", "tendrán",
+    "tendrás", "tendré", "tendréis", "tendría", "tendríais", "tendríamos", "tendrían",
+    "tendrías", "tened", "tenemos", "teniendo", "tener", "tenga", "tengamos", "tengan",
+    "tengas", "tengo", "tenía", "teníais", "teníamos", "tenían", "tenías", "tenid",
+    "tenida", "tenidas", "tenido", "tenidos", "tenéis", "tenía", "teníamos", "tenían",
+    "ti", "tiene", "tienen", "tienes", "todo", "toda", "todos", "todas", "tu", "tus", "tuya",
+    "tuyas", "tuyo", "tuyos", "un", "una", "unas", "uno", "unos", "vosotras", "vosotros",
+    "vuestra", "vuestras", "vuestro", "vuestros", "y", "ya", "yo", "él", "éste", "ésta", 
+    "éstos", "éstas", "mío", "mía", "míos", "mías", "tú", "usted", "ustedes", "nos"
+}
