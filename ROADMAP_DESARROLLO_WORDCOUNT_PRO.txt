@@ -1,0 +1,711 @@
+================================================================================
+ROADMAP DE DESARROLLO
+WORDCOUNT PRO — SISTEMA DE ANALISIS TEXTUAL INTELIGENTE PARA EL ESPAÑOL
+================================================================================
+
+Tipo de documento : Hoja de Ruta Técnica de Desarrollo (Guía de Ejecución)
+Versión            : 1.0
+Fecha de emisión   : Junio 2026
+Clasificación      : Documento Técnico-Académico — Consolida y operacionaliza:
+                      - PLAN_DE_NEGOCIOS_DE_CONTADOR_DE_PALABRAS123.txt (v2.0)
+                      - PLAN_DE_ARQUITECTURA_WORDCOUNT_PRO.txt (v1.0)
+                      - LOGICA_DE_NEGOCIO_WORDCOUNT_PRO.txt (v1.1)
+Ciudad             : Pucallpa, Ucayali, Perú
+
+================================================================================
+INDICE
+================================================================================
+0.  CONTROL DE VERSIONES Y DOCUMENTOS FUENTE
+1.  PROPOSITO Y ALCANCE DE ESTE ROADMAP
+2.  PRINCIPIOS Y METODOLOGIA DE TRABAJO
+3.  LINEA DE TIEMPO MACRO (RESUMEN EJECUTIVO)
+4.  SPRINT 0 — PREPARACION DEL ENTORNO (SEMANA PREVIA AL MES 1)
+5.  FASE 1 — ACADEMICA / MVP (MESES 1 A 3)
+6.  FASE 2 — VALIDACION (MESES 4 A 6)
+7.  FASE 3 — COMERCIALIZACION (MESES 7 A 12)
+8.  FASE 4 — ESCALABILIDAD (AÑO 2)
+9.  MATRIZ CONSOLIDADA DE TRAZABILIDAD
+10. CHECKLISTS GO/NO-GO POR FASE
+11. GESTION DE RIESGOS APLICADA AL ROADMAP
+12. CARGA DEL EQUIPO Y ROLES POR FASE
+13. DEFINICION DE "HECHO" (DEFINITION OF DONE) GENERAL
+14. ARTEFACTOS Y DOCUMENTOS A PRODUCIR POR FASE
+15. CIERRE Y PROXIMOS PASOS
+
+
+================================================================================
+0. CONTROL DE VERSIONES Y DOCUMENTOS FUENTE
+================================================================================
+Versión   Fecha          Descripción
+--------  -------------  ------------------------------------------------------
+1.0       Jun-2026        Versión inicial. Sintetiza el Plan de Negocios v2.0
+                           (QUÉ y POR QUÉ), el Plan de Arquitectura v1.0 (CÓMO
+                           técnico) y la Lógica de Negocio v1.1 (reglas BR-XXX)
+                           en un único calendario de ejecución por sprints,
+                           con entregables, pruebas y criterios de aceptación.
+
+Este documento NO reemplaza a los tres documentos fuente: los complementa.
+Cada vez que este roadmap referencia una regla de negocio, lo hace con su
+código BR-XXX (ver Lógica de Negocio, sección 17); cada vez que referencia
+un módulo técnico, usa el nombre exacto de carpeta/archivo definido en el
+Plan de Arquitectura (sección 4 y 6). Si surge una contradicción entre este
+roadmap y alguno de los tres documentos fuente, el documento fuente
+correspondiente prevalece y este roadmap debe actualizarse.
+
+
+================================================================================
+1. PROPOSITO Y ALCANCE DE ESTE ROADMAP
+================================================================================
+El Plan de Negocios responde "qué construir y por qué". El Plan de
+Arquitectura responde "cómo construirlo técnicamente". La Lógica de Negocio
+responde "qué reglas exactas debe cumplir el código". Ninguno de los tres
+responde, día a día, "qué hago esta semana y cómo sé que terminé bien".
+
+Ese es el propósito de este Roadmap: convertir las tres fuentes en un
+calendario operativo, sprint por sprint (ciclos de 2 semanas, según la
+recomendación metodológica del Plan de Negocios, sección 16.2), de modo que
+un equipo de 1 a 2 personas (la realidad descrita en el Plan de Negocios,
+sección 11) pueda ejecutar el proyecto sin perder de vista ni la fecha de
+entrega académica, ni la integridad arquitectónica, ni las reglas de negocio
+que protegen el modelo de monetización.
+
+Alcance temporal: desde la Semana 0 (preparación) hasta el cierre del Año 1
+(Mes 12) con detalle de sprint, y desde el Año 2 en adelante con detalle
+trimestral (estratégico, no de sprint), ya que el propio Plan de Negocios y
+el Plan de Arquitectura tratan el Año 2 como "visión de escalabilidad" sin
+comprometerse a fechas exactas.
+
+
+================================================================================
+2. PRINCIPIOS Y METODOLOGIA DE TRABAJO
+================================================================================
+2.1 Cadencia: sprints de 2 semanas con tablero Kanban (Trello o Notion, según
+    la recomendación del Plan de Negocios, sección 16.2). Cada sprint cierra
+    con una entrega funcional, no con código a medias.
+
+2.2 Trazabilidad obligatoria: todo commit, pull request y test relevante
+    debe referenciar el código de regla de negocio que protege (formato
+    BR-XXX, según la Lógica de Negocio, sección 1), por ejemplo
+    `test_BR014_limite_5000_palabras_plan_gratuito`.
+
+2.3 Regla de oro heredada de la Lógica de Negocio: ninguna regla de negocio
+    vive en el router/endpoint ni en el componente de React; toda regla vive
+    en la capa de Servicio del backend, salvo el caso explícitamente
+    autorizado por el Plan de Arquitectura (Módulo 1 gratuito calculado en
+    cliente, ADR-004).
+
+2.4 CI obligatorio desde el primer sprint con código: ruff + mypy + pytest en
+    backend, eslint + vitest en frontend (Plan de Arquitectura, sección 9.4).
+    Ningún sprint se considera cerrado si el pipeline de CI está en rojo.
+
+2.5 Revisión de ADRs al inicio de cada Fase: tal como indica la conclusión
+    del Plan de Arquitectura (sección 15), antes de iniciar cada nueva Fase
+    (1→2, 2→3, 3→4) el equipo debe releer la sección 13 (ADRs) y la sección
+    19 de la Lógica de Negocio (Decisiones Pendientes) y resolver lo que
+    corresponda antes de avanzar.
+
+2.6 Cada sprint de este roadmap incluye seis campos fijos: Objetivo,
+    Backend, Frontend, Infraestructura/DevOps, Reglas de negocio (BR-XXX),
+    y Entregable + Criterio de aceptación. Esto evita que el equipo confunda
+    "trabajé en algo" con "completé algo verificable".
+
+
+================================================================================
+3. LINEA DE TIEMPO MACRO (RESUMEN EJECUTIVO)
+================================================================================
+Fase                    Meses     Objetivo de negocio              Hito técnico clave
+-----------------------  --------  --------------------------------  ------------------------------
+Sprint 0 (Preparación)   Semana 0  Arrancar sin fricción             Entornos Windows/Docker listos
+Fase 1 — Académica/MVP   1 a 3     Validar el motor de análisis ES   MVP desplegado + beta privada
+Fase 2 — Validación      4 a 6     Probar con usuarios reales        v1.0 pública + auth completa
+Fase 3 — Comercialización 7 a 12   Monetizar y crecer                Freemium + pagos + docentes/inst.
+Fase 4 — Escalabilidad   Año 2     Escalar el producto y el mercado  API pública + app móvil + IA
+
+Hitos financieros y de producto asociados (Plan de Negocios, secciones 1 y
+14): punto de equilibrio en el Mes 5, 500 usuarios activos mensuales y 65
+suscriptores premium al cierre del Año 1, ROI proyectado de 76.6%.
+
+
+================================================================================
+4. SPRINT 0 — PREPARACION DEL ENTORNO (SEMANA PREVIA AL MES 1)
+================================================================================
+Objetivo: eliminar toda fricción de entorno ANTES de que empiece a correr el
+cronograma de 12 meses del Plan de Negocios.
+
+Tareas (Plan de Arquitectura, sección 9.1):
+  - Instalar Git para Windows, configurar `.gitattributes` (`* text=auto
+    eol=lf`) en la raíz del repositorio para evitar conflictos CRLF/LF.
+  - Instalar Python 3.12+ (marcar "Add Python to PATH") y Node.js LTS.
+  - Instalar Docker Desktop para Windows con backend WSL2 habilitado (vía
+    para Postgres/Redis idénticos a producción).
+  - Crear repositorio Git con la estructura de carpetas `backend/` y
+    `frontend/` definida en el Plan de Arquitectura, secciones 4.2 y 6.2.
+  - Crear `docker-compose.yml` inicial (servicios `db` y `redis`) y
+    `.env.example` en ambas carpetas.
+  - Instalar Visual Studio Code con extensiones: Python, Pylance, ESLint,
+    Prettier, Tailwind CSS IntelliSense, Docker, GitLens.
+  - Configurar tablero Kanban (Trello/Notion) con las columnas: Backlog /
+    Sprint Actual / En Revisión / Hecho.
+  - Crear cuentas free-tier: Vercel, Railway, Supabase, Cloudflare, Sentry,
+    UptimeRobot (todas mencionadas en el Plan de Negocios y el Plan de
+    Arquitectura como base de infraestructura de costo casi nulo).
+
+Entregable y criterio de aceptación: un desarrollador nuevo puede clonar el
+repositorio, ejecutar `docker compose up -d db redis`, levantar el backend
+con `uvicorn app.main:app --reload` y el frontend con `npm run dev`, y ver
+`http://localhost:8000/docs` y `http://localhost:5173` funcionando, en menos
+de 30 minutos siguiendo solo el README.
+
+
+================================================================================
+5. FASE 1 — ACADEMICA / MVP (MESES 1 A 3)
+================================================================================
+Alcance de la Fase (Plan de Arquitectura, sección 12): estructura completa
+de carpetas backend/frontend, Módulo 1 (BasicCounter + ReadingTimeEstimator)
+corriendo 100% en cliente, esquema inicial de base de datos (users, analyses
+básico), autenticación JWT básica, despliegue en free tiers de Vercel/
+Railway/Supabase, CI básico. NO se implementa todavía: Celery, módulo de
+pagos, herramientas docentes ni API pública.
+
+--------------------------------------------------------------------------------
+5.1 MES 1 — Sprints 1 y 2 — Cimientos y diseño
+--------------------------------------------------------------------------------
+SPRINT 1 (Semanas 1-2)
+  Objetivo: definir requerimientos y dejar el esqueleto técnico listo.
+  Backend: crear `app/core/config.py` (pydantic-settings), `app/db/base.py`
+    y `app/db/session.py` (engine async SQLAlchemy 2.0 + asyncpg), primer
+    modelo `User` y migración inicial con Alembic.
+  Frontend: scaffolding con Vite + React 18 + TypeScript + Tailwind, carpeta
+    `src/` según sección 6.2 del Plan de Arquitectura, wireframes en Figma
+    del editor de texto y el panel de métricas.
+  Infraestructura/DevOps: pipeline de CI mínimo en GitHub Actions (lint +
+    build, sin tests todavía porque no hay lógica que probar aún).
+  Reglas de negocio: ninguna BR todavía (sprint de cimientos).
+  Entregable / Criterio de aceptación: repositorio con backend y frontend
+    "vacíos pero corriendo", wireframes aprobados, esquema ER versión 1
+    (tablas `users` y `analyses`) dibujado y revisado.
+
+SPRINT 2 (Semanas 3-4)
+  Objetivo: cerrar el diseño de base de datos y preparar el terreno del
+    motor de análisis.
+  Backend: modelos ORM `Analysis` y tabla `audit_logs` (Plan de Arquitectura,
+    sección 4.2); definir la interfaz abstracta `TextAnalyzer` en
+    `services/text_analysis/base.py` (Strategy Pattern, ADR vinculado a la
+    sección 4.4).
+  Frontend: layout base (header, editor, panel lateral de métricas) sin
+    lógica de conteo todavía, usando componentes Tailwind del sistema de
+    diseño (sección 6.9).
+  Infraestructura/DevOps: `docker-compose.yml` final con `db` y `redis`,
+    variables de entorno documentadas en `.env.example`.
+  Reglas de negocio: BR-123 preparado conceptualmente (rechazo de texto
+    vacío) como parte del contrato de la interfaz `TextAnalyzer`.
+  Entregable / Criterio de aceptación: esquema de base de datos versión 1
+    migrado y corriendo en Postgres local vía Docker; interfaz
+    `TextAnalyzer` documentada y revisada en code review.
+
+--------------------------------------------------------------------------------
+5.2 MES 2 — Sprints 3 y 4 — El corazón del producto: el motor de análisis
+--------------------------------------------------------------------------------
+SPRINT 3 (Semanas 5-6)
+  Objetivo: construir el tokenizador en español, el diferenciador clave del
+    producto (Plan de Negocios, "Propuesta de Valor").
+  Backend: implementar `tokenizer_es.py` (segmentación de palabras
+    respetando tildes, eñe, signos ¿¡ y palabras compuestas con guión) y
+    `basic_counter.py` (palabras, caracteres, párrafos, oraciones, líneas).
+  Frontend: replicar la misma lógica de tokenización en TypeScript en el
+    cliente (ADR-004: el Módulo 1 se calcula 100% en el navegador para
+    latencia percibida casi nula).
+  Infraestructura/DevOps: activar `pytest` + `vitest` en el pipeline de CI.
+  Reglas de negocio: BR-020 a BR-030 (motor de análisis) y BR-123 (rechazo
+    de texto vacío), según el orden sugerido en la Lógica de Negocio,
+    sección 20, Sprint/Etapa 1.
+  Entregable / Criterio de aceptación: suite de pruebas unitarias DEDICADA
+    a casos límite del español (tildes, eñe, ¿¡, guiones) pasando al 100%
+    en Python Y en TypeScript — riesgo técnico #1 del proyecto según el
+    Plan de Arquitectura, sección 14, debe quedar resuelto antes de seguir.
+
+SPRINT 4 (Semanas 7-8)
+  Objetivo: conectar frontend y backend con el primer contrato de API.
+  Backend: endpoint `POST /api/v1/analysis/text` (sin persistencia todavía,
+    Fase 1 según el mapeo arquitectónico), documentación OpenAPI automática
+    visible en `/docs`.
+  Frontend: editor de texto con conteo en tiempo real conectado al motor
+    local (TanStack Query reservado para cuando exista persistencia real;
+    Zustand para el estado del editor, según la sección 6.4).
+  Infraestructura/DevOps: CORS configurado entre `localhost:5173` y
+    `localhost:8000`; `request_id` middleware para correlación de logs.
+  Reglas de negocio: BR-040, BR-041 (registro/login básico, sin recuperación
+    de contraseña todavía), BR-047, BR-048 (validación de credenciales).
+  Entregable / Criterio de aceptación: un usuario puede escribir o pegar un
+    texto y ver el conteo de palabras/caracteres/párrafos actualizarse en
+    tiempo real sin llamadas de red, con el mismo resultado exacto que
+    entregaría el endpoint del backend para el mismo texto (prueba cruzada
+    cliente/servidor).
+
+--------------------------------------------------------------------------------
+5.3 MES 3 — Sprints 5 y 6 — Pruebas, despliegue y beta privada
+--------------------------------------------------------------------------------
+SPRINT 5 (Semanas 9-10)
+  Objetivo: ejecutar el plan de pruebas integral y preparar el primer
+    despliegue.
+  Backend: pruebas de integración (`tests/integration/`) sobre el endpoint
+    de análisis; configurar `Dockerfile` multi-stage (`python:3.12-slim`).
+  Frontend: pulido de UX según feedback interno de wireframes; pruebas con
+    Vitest sobre el tokenizador TypeScript.
+  Infraestructura/DevOps: cuentas de producción en Vercel y Railway
+    conectadas al repositorio (despliegue automático en cada push a
+    `main`); Supabase Postgres de producción creado.
+  Reglas de negocio: validación cruzada de BR-020 a BR-030 contra "casos de
+    prueba dorados" compartidos entre Python y TypeScript (Plan de
+    Arquitectura, sección 14, riesgo de desincronización cliente/backend).
+  Entregable / Criterio de aceptación: el MVP corre en `https://` de Vercel
+    (frontend) y Railway (backend) apuntando a Supabase, con `/healthz`
+    respondiendo 200 OK.
+
+SPRINT 6 (Semanas 11-12)
+  Objetivo: lanzar la beta privada y cerrar la Fase 1.
+  Backend: ajustes de bugs reportados; endpoint `GET /healthz` y `/readyz`
+    (Plan de Arquitectura, sección 9.6).
+  Frontend: ajustes de UI/UX según feedback de los primeros usuarios.
+  Infraestructura/DevOps: UptimeRobot apuntando a `/healthz`; Sentry
+    integrado en backend y frontend (capa gratuita).
+  Reglas de negocio: cierre formal de BR-020 a BR-030, BR-040/041/047/048,
+    BR-123, según el plan de la Lógica de Negocio.
+  Entregable / Criterio de aceptación: beta privada activa con 10 a 20
+    usuarios de confianza del entorno universitario de Pucallpa (Plan de
+    Negocios, sección 2.5); feedback recolectado en un documento
+    estructurado (qué funcionó, qué no, qué falta).
+
+>>> HITO DE CIERRE DE FASE 1 (fin de Mes 3):
+    MVP desplegado y validado internamente. Antes de pasar a la Fase 2,
+    releer ADR-001 a ADR-007 (Plan de Arquitectura, sección 13) y confirmar
+    que ninguno requiere ajuste con la información real obtenida del beta.
+
+
+================================================================================
+6. FASE 2 — VALIDACION (MESES 4 A 6)
+================================================================================
+Alcance de la Fase (Plan de Arquitectura, sección 12): sistema de
+registro/login completo, módulo de historial (90 días), corrección de bugs
+del beta, primeras alianzas con docentes (gestionadas aún manualmente, sin
+el Módulo 4 completo).
+
+--------------------------------------------------------------------------------
+6.1 MES 4 — Sprints 7 y 8 — Autenticación completa y beta pública
+--------------------------------------------------------------------------------
+SPRINT 7 (Semanas 13-14)
+  Objetivo: cerrar los bugs reportados en el beta privada.
+  Backend: corrección de defectos priorizados por severidad; ampliar la
+    suite de pruebas de regresión.
+  Frontend: corrección de issues de UX/UI reportados.
+  Infraestructura/DevOps: revisión de logs estructurados (`structlog`) para
+    identificar patrones de error no reportados explícitamente.
+  Reglas de negocio: validación de que ningún bug corregido haya violado
+    BR-020 a BR-030 (regresión del motor de análisis).
+  Entregable / Criterio de aceptación: cero bugs críticos abiertos del
+    beta privada (alineado al KPI técnico "Bugs críticos en producción = 0").
+
+SPRINT 8 (Semanas 15-16)
+  Objetivo: sistema de registro/login completo y módulo de historial.
+  Backend: `auth_service.py` completo — JWT de corta duración + refresh
+    token con rotación (ADR-003), tabla `refresh_tokens`, rate limiting de
+    login con `slowapi` + Redis; `analysis_repository.py` con historial de
+    90 días.
+  Frontend: pantallas de registro, login, recuperación de contraseña;
+    pantalla de historial de análisis (solo para usuarios autenticados).
+  Infraestructura/DevOps: Redis de producción activo (Railway add-on o
+    servicio independiente).
+  Reglas de negocio: BR-042 a BR-046 (JWT, refresh rotation, rate limiting
+    de login), BR-010, BR-011, BR-101 (límite de plan gratuito, no
+    persistencia de análisis del usuario anónimo/free fuera de lo permitido).
+  Entregable / Criterio de aceptación: un usuario puede registrarse, iniciar
+    sesión, cerrar sesión, recuperar su contraseña y ver su historial de los
+    últimos 90 días; un token JWT expirado se renueva automáticamente sin
+    pedir login de nuevo.
+
+--------------------------------------------------------------------------------
+6.2 MES 5 — Sprints 9 y 10 — Lanzamiento beta pública 0.9
+--------------------------------------------------------------------------------
+SPRINT 9 (Semanas 17-18)
+  Objetivo: cumplimiento legal de privacidad ANTES de exponer el producto
+    al público general.
+  Backend: implementar BR-100, BR-102, BR-103 (Ley N.° 29733): por defecto
+    no se almacena el texto original del usuario (ADR-007), solo métricas
+    derivadas; página de política de privacidad generada con contenido
+    real, no genérico.
+  Frontend: banner de consentimiento, enlace visible a política de
+    privacidad y términos de servicio.
+  Infraestructura/DevOps: auditoría de qué tablas almacenan qué datos,
+    documentada en `audit_logs`.
+  Reglas de negocio: BR-100, BR-102, BR-103.
+  Entregable / Criterio de aceptación: revisión legal/académica de
+    cumplimiento de privacidad aprobada antes de continuar.
+
+SPRINT 10 (Semanas 19-20)
+  Objetivo: lanzar la beta pública versión 0.9.
+  Backend: hardening de seguridad (headers HTTP, HTTPS forzado, factor de
+    costo bcrypt = 12 según el Plan de Negocios).
+  Frontend: pulido final de onboarding — "el valor del producto debe ser
+    visible en los primeros 30 segundos de uso" (Plan de Negocios, sección
+    13.2, Plan de Contingencia R1).
+  Infraestructura/DevOps: Cloudflare delante del dominio (CDN + WAF +
+    protección DDoS), dominio `.pe` configurado.
+  Reglas de negocio: cierre formal de BR-042 a BR-048, BR-100 a BR-103.
+  Entregable / Criterio de aceptación: beta pública 0.9 accesible desde el
+    dominio definitivo, con onboarding medido (tiempo hasta el primer
+    análisis completado por un usuario nuevo).
+
+--------------------------------------------------------------------------------
+6.3 MES 6 — Sprints 11 y 12 — Cierre de semestre 1 y evaluación
+--------------------------------------------------------------------------------
+SPRINT 11 (Semanas 21-22)
+  Objetivo: preparar la base para el modelo freemium (sin activarlo todavía
+    como cobro real).
+  Backend: `subscription_service.py` como ÚNICA fuente de verdad de
+    capacidades por plan (BR-001, Lógica de Negocio sección 3); tabla
+    `subscriptions` con estados (`active`, `expired`, `cancelled`,
+    `past_due`).
+  Frontend: pantallas de "planes y precios" (informativas, sin checkout
+    real todavía).
+  Infraestructura/DevOps: staging environment creado (recomendado antes de
+    activar cobros reales en la Fase 3, Plan de Arquitectura, sección 9.3).
+  Reglas de negocio: preparación de BR-010 a BR-014 (estructura de planes y
+    límites) sin BR-060+ (pagos) todavía.
+  Entregable / Criterio de aceptación: la matriz de capacidades por plan
+    (Lógica de Negocio, sección 3) está implementada y testeada, aunque
+    todos los usuarios reales sigan en plan free por ahora.
+
+SPRINT 12 (Semanas 23-24)
+  Objetivo: lanzamiento oficial de WordCount Pro v1.0 y cierre de semestre.
+  Backend: congelar alcance de v1.0; `referral_service.py` con lógica
+    básica del programa de referidos.
+  Frontend: activación visual del programa de referidos; primer artículo
+    SEO publicado en el blog (contenido, no código, pero coordinado con el
+    lanzamiento).
+  Infraestructura/DevOps: revisión de las métricas KPI definidas en el
+    Plan de Negocios, sección 14, con los datos reales del semestre 1.
+  Reglas de negocio: BR-090 a BR-093 (referidos) en su versión inicial,
+    documentando como pendientes las decisiones #2 y #3 de la Lógica de
+    Negocio, sección 19 (condición de activación y umbral anti-abuso).
+  Entregable / Criterio de aceptación: WordCount Pro v1.0 lanzado
+    públicamente; informe de cierre de semestre 1 con MAU, retención y
+    bugs críticos comparados contra las metas del Plan de Negocios.
+
+>>> HITO DE CIERRE DE FASE 2 (fin de Mes 6):
+    Producto v1.0 público, con autenticación y privacidad sólidas. Antes de
+    iniciar la Fase 3 (que activa cobros reales), confirmar que el staging
+    environment está operativo y que BR-100 a BR-105 están completamente
+    cerradas.
+
+
+================================================================================
+7. FASE 3 — COMERCIALIZACION (MESES 7 A 12)
+================================================================================
+Alcance de la Fase (Plan de Arquitectura, sección 12): Módulo 2 completo
+(legibilidad, densidad, nube de palabras), Módulo 3 (carga de archivos
+.docx/.pdf y exportación), integración de pagos Culqi/Stripe y modelo
+freemium real, Módulo 4 (herramientas docentes) para el introducción de Redis y Celery para soportar carga adicional.
+
+--------------------------------------------------------------------------------
+7.1 MESES 7-8 — Sprints 13 a 16 — Análisis avanzado y archivos
+--------------------------------------------------------------------------------
+SPRINT 13-14 (Mes 7)
+  Objetivo: Módulo 2 — análisis avanzado e inteligencia artificial.
+  Backend: `readability_fh.py` (Fernández-Huerta), `keyword_density.py` (auditoría SEO),
+    `ai_detector.py` (análisis de perplejidad y longitud de oraciones para ChatGPT),
+    `ai_copilot.py` (resumen e ideas de títulos), y `apa_formatter.py` (citas APA 7),
+    orquestados por `AnalysisOrchestrator`. Implementar tabla `user_versions` de autoguardado.
+  Frontend: panel de métricas avanzadas (legibilidad, nube de palabras, comparación),
+    Studio de Diseño (Personalización en caliente de CSS variables), widget del Detector
+    de ChatGPT con barra de probabilidad, e integrador de Citas APA 7.
+  Infraestructura/DevOps: benchmarking del motor (meta < 200 ms backend, < 100 ms en UI).
+  Reglas de negocio: BR-034 (ChatGPT Detector), BR-035 (Copilot IA), BR-036 (SEO Stuffing),
+    BR-037 (Tiempos de Lectura), BR-038 (Citas APA 7) y BR-039 (Autoguardado).
+  Entregable / Criterio de aceptación: métricas de IA, SEO, y diseño dinámico sincronizados y
+    pasando pruebas unitarias. Panel de Estudio de Diseño funcionando con 8 temas visuales.
+
+SPRINT 15-16 (Mes 8)
+  Objetivo: Módulo 3 — carga de archivos, visión (OCR), voz y optimización.
+  Backend: `FileParserFactory` (.docx, .pdf, .txt), integración de Tesseract.js/motor local
+    para lectura de imágenes (OCR), y script de descripción de dibujos manuscritos.
+  Frontend: zona de arrastre para archivos, botón de activación de Web Speech API (dictado por voz),
+    miniatura e indicación de progreso OCR para cargas de fotos/dibujos.
+  Infraestructura/DevOps: límites de tamaño configurados a nivel de middleware;
+    BackgroundTasks asíncronas para lectura pesada de archivos.
+  Reglas de negocio: BR-031 (Dictado de voz), BR-032 (OCR imágenes), BR-033 (Visión de dibujos),
+    y BR-050 a BR-054 (gestión de archivos y reportes).
+  Entregable / Criterio de aceptación: un usuario puede subir un `.docx`, un `.pdf` o una imagen
+    con texto (o dibujo) y transcribirlo por voz, obteniendo el conteo inmediato y correcto.
+
+--------------------------------------------------------------------------------
+7.2 MESES 9-10 — Sprints 17 a 20 — Pagos, freemium real y plan 
+--------------------------------------------------------------------------------
+SPRINT 17-18 (Mes 9)
+  Objetivo: activar pagos reales y el modelo freemium definitivo.
+  Backend: `payment_service.py` con SDK de Culqi/Stripe vía `httpx`,
+    Idempotency Key Pattern en webhooks (evitar procesar dos veces el mismo
+    evento de pago), máquina de estados de suscripción completa
+    (`active` → `past_due` → `expired`/`cancelled`); resolver la decisión
+    pendiente #1 de la Lógica de Negocio, sección 19 (días exactos de
+    gracia de `past_due` y reintentos de cobro) ANTES de cerrar BR-064.
+  Frontend: checkout de upgrade a Premium, pantalla de gestión de
+    suscripción (cancelar, cambiar de plan).
+  Infraestructura/DevOps: Celery + Redis como broker, introducido recién
+    ahora que el volumen de procesamiento lo justifica (Plan de
+    Arquitectura, sección 4.1); claves sandbox reemplazadas por claves de
+    producción de Culqi/Stripe SOLO después de validar en staging.
+  Reglas de negocio: BR-060 a BR-065 (pagos y suscripciones) completas.
+  Entregable / Criterio de aceptación: un usuario puede pagar, recibir
+    upgrade inmediato a Premium, y el sistema degrada automáticamente a
+    "free" sin intervención manual si el pago falla y se agota el período
+    de gracia (BR-063).
+
+SPRINT 19-20 (Mes 10)
+  Objetivo: módulo docente y lanzamiento del   Backend: `teacher_service.py` (perfiles docentes con reglas min/max
+    palabras, tokens de enlace compartible), `institution_service.py`
+    (cuenta paraguas, miembros); resolver la decisión pendiente #4 de la
+    Lógica de Negocio, sección 19 (qué ocurre al exceder 100 usuarios
+    es).
+  Frontend: panel docente (crear perfil, ver envíos de alumnos validados),
+    panel  (administración de miembros).
+  Infraestructura/DevOps: alianzas comerciales con universidades de
+    Pucallpa y Lima coordinadas en paralelo (no es tarea de código, pero
+    condiciona la prioridad de QA del panel ).
+  Reglas de negocio: BR-070 a BR-075 (módulo docente), BR-080 a BR-083
+    ().
+  Entregable / Criterio de aceptación: un docente crea un perfil con límite
+    de palabras, comparte el enlace, y un alumno puede enviar su texto y
+    ver si "pasó" la validación (`passed_validation`), sin necesidad de
+    cuenta .
+
+--------------------------------------------------------------------------------
+7.3 MESES 11-12 — Sprints 21 a 24 — Exportación, cierre de año y planificación
+--------------------------------------------------------------------------------
+SPRINT 21-22 (Mes 11)
+  Objetivo: módulo de exportación de reportes.
+  Backend: `pdf_exporter.py` (WeasyPrint/ReportLab) y `excel_exporter.py`
+    (openpyxl), ejecutados como tarea asíncrona (Celery) para no bloquear
+    el tiempo de respuesta de la API.
+  Frontend: botón de exportación con estado "generando reporte" y
+    notificación cuando está listo para descargar.
+  Infraestructura/DevOps: backup `pg_dump` semanal adicional en proveedor
+    independiente (mitigación del riesgo R3, Plan de Negocios, sección 12).
+  Reglas de negocio: cierre de BR-050 a BR-054 (exportación asíncrona,
+    vinculada también al KPI de tiempo de respuesta < 200 ms).
+  Entregable / Criterio de aceptación: un usuario premium exporta su
+    análisis a PDF y a Excel, y el archivo refleja exactamente las mismas
+    métricas mostradas en pantalla.
+
+SPRINT 23-24 (Mes 12)
+  Objetivo: cierre del Año 1 y planificación del Año 2.
+  Backend: congelar alcance; resolver las decisiones pendientes #2 y #3 de
+    la Lógica de Negocio, sección 19 (condición de activación de referidos
+    y umbral anti-abuso), convirtiéndolas en reglas BR-XXX definitivas.
+  Frontend: pulido general de UI/UX basado en feedback acumulado de los 12
+    meses.
+  Infraestructura/DevOps: revisión de costos reales de infraestructura vs.
+    los S/ 2,904.00 de inversión proyectada; revisión de ADRs (sección 2.5
+    de este roadmap).
+  Reglas de negocio: cierre formal de todas las BR-XXX activas a la fecha;
+    actualización del control de versiones de la Lógica de Negocio.
+  Entregable / Criterio de aceptación: informe anual con las métricas
+    reales (MAU, suscriptores premium, ROI, punto de equilibrio) comparadas
+    contra las metas del Plan de Negocios, sección 1 y 14; documento de
+    planificación del Año 2 aprobado.
+
+>>> HITO DE CIERRE DE FASE 3 / AÑO 1 (fin de Mes 12):
+    Producto monetizado, con docentes e instituciones activas. Evaluar
+    formalmente: ¿se alcanzó el punto de equilibrio en el Mes 5? ¿se llegó
+    a 500 MAU y 65 premium? El resultado de esta evaluación condiciona el
+    ritmo y la prioridad real de la Fase 4.
+
+
+================================================================================
+8. FASE 4 — ESCALABILIDAD (AÑO 2)
+================================================================================
+Esta fase se planifica a nivel trimestral (no de sprint), siguiendo el
+criterio del propio Plan de Negocios y Plan de Arquitectura, que la tratan
+como "visión" sujeta a los resultados reales del Año 1.
+
+  Q1 (Meses 13-15): Diseño de la API pública (`public_api.py`, autenticación
+    por API Key, modelo de facturación por palabras procesadas — BR-110 a
+    BR-113); definición del contrato `API_CONTRACT_v1.yaml`.
+  Q2 (Meses 16-18): Integración LTI con LMS (Moodle, Canvas); evaluación
+    formal de extracción de algún módulo del monolito a microservicio
+    independiente, SOLO si los datos reales de uso lo justifican (Plan de
+    Arquitectura, sección 10.5 y ADR-001).
+  Q3 (Meses 19-21): Desarrollo de la app móvil Android/iOS con React Native,
+    reutilizando el motor de tokenización en español ya validado en el
+    cliente web.
+  Q4 (Meses 22-24): Funciones de IA (sugerencias de estilo, detección de
+    repeticiones) como nuevas estrategias `TextAnalyzer` (extensión natural
+    del Strategy Pattern, sin romper el código existente); expansión a
+    Colombia y México; búsqueda activa de financiamiento (CONCYTEC,
+    incubadoras, angel investors).
+
+Criterio de aceptación de la Fase 4 (general): cada nueva capacidad debe
+poder activarse o desactivarse por país/mercado sin afectar a los usuarios
+de los mercados ya estables, dado que la arquitectura modular fue diseñada
+explícitamente para esto desde la Fase 1 (ADR-001).
+
+
+================================================================================
+9. MATRIZ CONSOLIDADA DE TRAZABILIDAD
+================================================================================
+Fase    Módulo de Arquitectura          Reglas BR-XXX        KPI que sostiene
+------  --------------------------------  --------------------  ---------------------------------
+1       text_analysis/ (Módulo 1)         BR-020 a BR-030,      Tiempo de respuesta < 200 ms,
+        + auth_service.py básico          BR-040/041/047/048,   Lanzamiento del MVP en el Mes 3
+                                           BR-123
+2       auth_service.py completo,         BR-042 a BR-048,      Disponibilidad >= 99.5%,
+        analysis_repository.py,           BR-010/011/101,       Retención mensual >= 80%
+        privacidad                        BR-100/102/103
+3       text_analysis/ (Módulo 2),        BR-050 a BR-054,      Ingresos >= S/ 975/mes,
+        file_parsers/, export/,           BR-060 a BR-065,      Conversión free->premium >= 5%,
+        payment_service.py,               BR-070 a BR-075,      Costo de adquisición <= S/ 8.00
+        teacher_service.py,                BR-080 a BR-083,
+        institution_service.py,            BR-090 a BR-093
+        referral_service.py
+4       public_api.py, integración LMS,   BR-110 a BR-113       Expansión de mercado, nuevas
+        módulo IA (nuevas Strategies)                             fuentes de ingreso recurrente
+
+Nota: BR-120 a BR-124 (validación de entrada) son transversales y se aplican
+desde el Sprint 3 (Fase 1) en adelante, en cada endpoint nuevo que se cree.
+
+
+================================================================================
+10. CHECKLISTS GO/NO-GO POR FASE
+================================================================================
+Antes de pasar de una fase a la siguiente, verificar:
+
+  GO/NO-GO Fase 1 -> Fase 2:
+    [ ] Suite de pruebas de tokenización en español al 100% (riesgo técnico #1)
+    [ ] MVP desplegado y accesible públicamente vía HTTPS
+    [ ] Feedback de la beta privada documentado y priorizado
+
+  GO/NO-GO Fase 2 -> Fase 3:
+    [ ] BR-100 a BR-105 (privacidad) cerradas y verificadas
+    [ ] Staging environment operativo
+    [ ] Cero bugs críticos abiertos en producción
+
+  GO/NO-GO Fase 3 -> Fase 4:
+    [ ] Punto de equilibrio evaluado contra el Mes 5 proyectado
+    [ ] 500 MAU y 65 suscriptores premium evaluados (aunque no se cumplan al
+        100%, debe existir el dato real, no una suposición)
+    [ ] Decisiones pendientes #1 a #5 de la Lógica de Negocio, sección 19,
+        resueltas y documentadas como reglas BR-XXX definitivas
+
+
+================================================================================
+11. GESTION DE RIESGOS APLICADA AL ROADMAP
+================================================================================
+Este roadmap activa explícitamente las mitigaciones ya definidas en el Plan
+de Negocios (sección 13) y el Plan de Arquitectura (sección 14) en los
+siguientes puntos del calendario:
+
+  - Riesgo R1 (baja adopción): el Plan de Contingencia Crítico del Plan de
+    Negocios, sección 13.2, se activa automáticamente si al cierre del
+    Sprint 8 (Mes 4) no se alcanzan los 200 usuarios proyectados.
+  - Riesgo técnico de tokenización en español: mitigado obligatoriamente
+    en el Sprint 3 (Mes 2), ANTES de continuar con cualquier otra
+    funcionalidad, tal como exige el Plan de Arquitectura, sección 14.
+  - Riesgo R5 (fuga de datos): mitigado en los Sprints 9 (Mes 5) mediante
+    el cierre de BR-100/102/103 ANTES de la beta pública.
+  - Riesgo R7 (deuda técnica): mitigado de forma continua por el CI
+    obligatorio (principio 2.4 de este roadmap) en cada sprint, no como un
+    evento aislado.
+
+
+================================================================================
+12. CARGA DEL EQUIPO Y ROLES POR FASE
+================================================================================
+Basado en el Plan de Negocios, sección 11:
+
+  Fase 1-2 (Meses 1-6): Rol 1 (Backend/Líder Técnico, 20-30 h/semana), Rol 2
+    (Frontend/UI, 15-20 h/semana). El fundador puede asumir ambos roles si
+    el equipo es de 1 sola persona.
+  Fase 3 (Meses 7-12): se suma dedicación parcial de Rol 3 (Marketing
+    Digital, 5-10 h/semana) en paralelo a los sprints de comercialización,
+    coordinando lanzamientos con campañas reales.
+  Fase 4 (Año 2): incorporación de 1 diseñador UX/UI y 1 especialista en
+    marketing digital (Año 2 según el plan de crecimiento del equipo); 1
+    desarrollador adicional dedicado a la API pública desde el Q1.
+
+
+================================================================================
+13. DEFINICION DE "HECHO" (DEFINITION OF DONE) GENERAL
+================================================================================
+Una tarea, sprint o fase de este roadmap se considera HECHA solo si cumple
+TODO lo siguiente:
+
+  1. El código pasa el pipeline de CI completo (ruff, mypy, pytest en
+     backend; eslint, vitest en frontend) sin excepciones ni tests
+     deshabilitados.
+  2. Toda regla de negocio implementada tiene al menos un test que
+     referencia su código BR-XXX en el nombre.
+  3. Ninguna regla de negocio vive en el router/endpoint ni en el
+     componente de React (principio 2.3 de este roadmap).
+  4. El entregable fue verificado manualmente end-to-end por al menos una
+     persona distinta a quien lo codificó (o, en equipo de 1 persona, tras
+     un descanso de al menos un día antes de la verificación).
+  5. La documentación relevante (README, ADR, comentarios de regla BR-XXX)
+     quedó actualizada en el mismo sprint, no "para después".
+
+
+================================================================================
+14. ARTEFACTOS Y DOCUMENTOS A PRODUCIR POR FASE
+================================================================================
+  Fase 1: Wireframes de Figma, esquema ER v1, README de instalación,
+    suite de pruebas de tokenización en español.
+  Fase 2: Política de privacidad, términos de servicio, informe de feedback
+    de beta, informe de cierre de semestre 1.
+  Fase 3: `API_CONTRACT` interno de pagos, manual del docente, manual
+    , informe anual de KPIs.
+  Fase 4: `API_CONTRACT_v1.yaml` público, documentación de integración LMS,
+    plan de expansión a Colombia/México, dossier para postulación a
+    financiamiento (CONCYTEC, incubadoras).
+
+
+================================================================================
+15. CIERRE Y PROXIMOS PASOS
+================================================================================
+Este roadmap debe revisarse al cierre de cada sprint (ajustes menores) y
+reescribirse formalmente al cierre de cada fase (ajustes mayores), de la
+misma forma en que la Lógica de Negocio indica que sus decisiones pendientes
+deben revisarse al cierre de cada sprint (sección 21).
+
+Próximo paso inmediato: ejecutar el Sprint 0 (sección 4) esta misma semana,
+de modo que el Sprint 1 pueda comenzar con el entorno de desarrollo
+completamente operativo y sin bloqueos técnicos previos.
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
+
+
+======================================================================
+NUEVAS ACTUALIZACIONES Y MEJORAS IMPLEMENTADAS (VERSIÓN ACTUAL)
+======================================================================
+
+Las siguientes funcionalidades han sido integradas exitosamente en la plataforma, modificando la arquitectura, logica y negocio de la misma para mejorar la experiencia del usuario y las capacidades tecnicas:
+
+1. Unificacion de Roles y Diseno Universal:
+   - Se ha eliminado la estricta separacion entre 'Estudiante' y 'Profesor' en la pantalla de inicio de sesion. Ahora existe un solo tipo de usuario general ('general') para simplificar el acceso.
+   - El diseno se ha redisenado con una estetica Premium (Fondo Morado Pastel, fuentes modernas y sin botones negros).
+
+2. Modulo 'Mis Documentos (Nube)':
+   - Se creo un panel visual especifico en la barra de navegacion para que los usuarios puedan ver y organizar sus documentos.
+   - El sistema guarda todo automaticamente cada 3 segundos en la base de datos y lo presenta en forma de 'Tarjetas' interactivas desde donde se puede recuperar el texto con un clic.
+
+3. Dashboard para Desarrolladores y Consola API:
+   - Se integro un entorno de pruebas (Playground) 100% funcional.
+   - Incluye una Calculadora de Ahorro en tiempo real que compara los costos de consumo frente a OpenAI.
+   - Permite la generacion y revocacion de API Keys seguras para simulacion de entornos de produccion.
+
+4. Motor de Conteo Universal (Unicode):
+   - El algoritmo de deteccion de palabras se ha actualizado con estandares Unicode.
+   - Ahora detecta y cuenta con absoluta precision caracteres alfanumericos, tildes, enies, y vocablos extranjeros.
+
+5. Persistencia de Sesion y Modo Libre:
+   - Persistencia (localStorage): La sesion de usuario sobrevive a recargas de pagina (F5) o cierres de pestana, mejorando la usabilidad.
+   - Modo Libre de Pruebas: El backend ha sido configurado para aceptar cualquier contrasena durante la fase de desarrollo, facilitando pruebas simultaneas entre el equipo.

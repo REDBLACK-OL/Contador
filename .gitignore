@@ -1,0 +1,43 @@
+# Node / Frontend dependencies
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Python / Backend dependencies
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+htmlcov/
+.pytest_cache/
+
+# Environment / Sensitive data
+.env
+.env.production
+.env.development
+
+# OS files
+.DS_Store
+Thumbs.db
+db.sqlite3
+
+# IDEs / Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

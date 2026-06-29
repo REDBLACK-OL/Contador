@@ -1,0 +1,20 @@
+[
+  {
+    "description": "Texto básico simple",
+    "text": "El niño corre en el parque.",
+    "expected_words": 6,
+    "expected_characters": 27
+  },
+  {
+    "description": "Caracteres especiales españoles (ñ, tildes)",
+    "text": "Mañana cantará una canción de cuna.",
+    "expected_words": 6,
+    "expected_characters": 35
+  },
+  {
+    "description": "Palabras con guión (BR-022)",
+    "text": "Es un acuerdo franco-peruano para el bien-estar.",
+    "expected_words": 7,
+    "expected_characters": 48
+  }
+]

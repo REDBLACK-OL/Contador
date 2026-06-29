@@ -1,0 +1,2002 @@
+================================================================================
+PLAN DE ARQUITECTURA DE SOFTWARE
+WORDCOUNT PRO - SISTEMA DE ANALISIS TEXTUAL INTELIGENTE PARA EL ESPAÑOL
+================================================================================
+
+Elaborado por : Ingeniero de Software Senior (15+ años de experiencia)
+Versión       : 1.0
+Fecha         : Junio 2026
+Clasificación : Documento Técnico-Académico (complemento del Plan de Negocios v2.0)
+Ciudad        : Pucallpa, Ucayali, Perú
+Stack base exigido : Backend Python/FastAPI, Frontend React+Vite+Tailwind,
+                      Base de datos PostgreSQL, entorno de desarrollo Windows.
+
+================================================================================
+INDICE
+================================================================================
+0.  CONTROL DE VERSIONES Y METADATOS
+1.  INTRODUCCION
+2.  OBJETIVOS Y ATRIBUTOS DE CALIDAD (NFR)
+3.  VISION GENERAL DE LA ARQUITECTURA
+4.  ARQUITECTURA DE BACKEND (PYTHON + FASTAPI)
+5.  ARQUITECTURA DE BASE DE DATOS (POSTGRESQL)
+6.  ARQUITECTURA DE FRONTEND (REACT + VITE + TAILWIND)
+7.  FLUJOS CRITICOS DEL SISTEMA (DIAGRAMAS DE SECUENCIA)
+8.  ARQUITECTURA DE SEGURIDAD
+9.  INFRAESTRUCTURA, ENTORNO DE DESARROLLO EN WINDOWS Y DESPLIEGUE
+10. ESCALABILIDAD Y RENDIMIENTO
+11. EXTENSIBILIDAD Y VISION FUTURA (API, LMS, MOVIL, IA)
+12. MAPEO ARQUITECTURA <-> FASES DEL PLAN DE NEGOCIO
+13. DECISIONES ARQUITECTONICAS (ADR RESUMIDOS)
+14. RIESGOS TECNICOS Y MITIGACION
+15. CONCLUSIONES
+
+
+================================================================================
+0. CONTROL DE VERSIONES Y METADATOS
+================================================================================
+Versión   Fecha          Autor                  Descripción
+--------  -------------  ---------------------  ----------------------------------
+1.0       Jun-2026        Arquitecto de Software  Versión inicial del plan de
+                                                   arquitectura derivado del Plan
+                                                   de Negocios v2.0 (WordCount Pro).
+
+Documentos relacionados:
+- PLAN_DE_NEGOCIOS_DE_CONTADOR_DE_PALABRAS123.txt (fuente funcional y de negocio)
+- (futuro) ADR-LOG.txt, API_CONTRACT_v1.yaml, ERD.dbml
+
+
+================================================================================
+1. INTRODUCCION
+================================================================================
+
+1.1 Propósito
+-------------
+Este documento traduce los requerimientos funcionales y de negocio descritos en
+el Plan de Negocios de WordCount Pro a una arquitectura de software concreta,
+implementable y evolutiva. Su objetivo es servir como mapa técnico único para
+que cualquier desarrollador (incluso trabajando solo, como ocurre en la Fase 1
+académica) pueda construir el sistema con decisiones ya tomadas, evitando
+retrabajo y deuda técnica prematura.
+
+1.2 Alcance
+-----------
+Cubre el diseño completo del backend, frontend, base de datos, seguridad,
+infraestructura y estrategia de escalabilidad para las 4 fases descritas en el
+plan de negocio: (1) Académica/MVP, (2) Validación, (3) Comercialización y
+(4) Escalabilidad. No cubre detalles de UI visual (wireframes/Figma) ni el
+plan financiero, que ya están definidos en el documento de negocio.
+
+1.3 Audiencia
+-------------
+Desarrollador(es) backend y frontend del proyecto, futuro equipo técnico que se
+incorpore en el Año 2, y el docente/mentor técnico que evalúe el proyecto.
+
+1.4 Restricciones y supuestos técnicos
+---------------------------------------
+- Backend obligatorio: Python 3.12+ con FastAPI (ASGI, async/await nativo).
+- Frontend obligatorio: React 18+ con Vite como bundler y Tailwind CSS como
+  sistema de estilos. TypeScript se adopta como estándar (no JavaScript puro)
+  porque reduce errores en tiempo de compilación, algo crítico para un equipo
+  de 1-2 personas sin red de seguridad de QA dedicado.
+- Base de datos obligatoria: PostgreSQL 15+.
+- Entorno de desarrollo principal: WINDOWS 10/11 (no Linux, no macOS). Todas
+  las instrucciones de instalación, scripts y comandos de este documento están
+  adaptados a PowerShell / CMD de Windows. Donde se use Docker, se asume Docker
+  Desktop para Windows con backend WSL2 (esto permite que, aunque el desarrollo
+  ocurra en Windows, los contenedores ejecuten Linux internamente, logrando
+  paridad con el entorno de producción real sin que el desarrollador necesite
+  usar Linux de forma nativa).
+- Equipo reducido (1-2 personas) en la Fase 1-2: la arquitectura debe poder
+  operarse y desplegarse por una sola persona sin DevOps dedicado.
+- Presupuesto casi nulo en infraestructura durante el MVP: se priorizan
+  capas gratuitas (free tier) de los proveedores cloud mencionados en el plan
+  de negocio (Vercel, Railway, Supabase, Cloudflare).
+
+
+================================================================================
+2. OBJETIVOS Y ATRIBUTOS DE CALIDAD (NFR - NON FUNCTIONAL REQUIREMENTS)
+================================================================================
+Cada decisión arquitectónica de este documento se justifica en función de los
+siguientes atributos de calidad, priorizados de mayor a menor peso para este
+proyecto:
+
+  1. SIMPLICIDAD OPERATIVA   -> un equipo de 1-2 personas debe poder mantenerlo.
+  2. CORRECCION LINGUISTICA  -> el motor de análisis en español es el corazón
+                                 del producto; debe ser 100% confiable.
+  3. RENDIMIENTO             -> tiempo de respuesta < 200 ms (KPI del plan de
+                                 negocio) y conteo en tiempo real sin demoras
+                                 perceptibles (< 100 ms percibidos en UI).
+  4. SEGURIDAD Y PRIVACIDAD  -> cumplimiento de la Ley N.° 29733 (Protección de
+                                 Datos Personales) y manejo responsable de los
+                                 textos subidos por los usuarios.
+  5. DISPONIBILIDAD          -> objetivo >= 99.5% (KPI técnico del plan).
+  6. ESCALABILIDAD PROGRESIVA-> la arquitectura debe poder crecer de "monolito
+                                 en free tier" a "sistema multi-servicio con
+                                 API pública" sin reescritura completa.
+  7. MANTENIBILIDAD          -> código tipado, capas separadas, pruebas
+                                 automatizadas, para que el "Rol 1" (líder
+                                 técnico) no acumule deuda técnica (riesgo R7
+                                 identificado en el plan de negocio).
+  8. COSTO DE INFRAESTRUCTURA-> minimizar gasto mensual en la Fase 1-2,
+                                 alineado a la inversión de S/ 2,904.00.
+
+
+================================================================================
+3. VISION GENERAL DE LA ARQUITECTURA
+================================================================================
+
+3.1 Estilo arquitectónico seleccionado
+----------------------------------------
+MONOLITO MODULAR con arquitectura en capas inspirada en Clean Architecture /
+Arquitectura Hexagonal ("Ports & Adapters"), desplegado inicialmente como un
+único servicio FastAPI, pero internamente organizado en módulos de dominio
+totalmente independientes entre sí (analysis, auth, users, files, billing,
+teacher_tools, notifications).
+
+Justificación (por qué NO microservicios desde el día 1):
+- Microservicios introducen complejidad operativa (orquestación, descubrimiento
+  de servicios, comunicación entre redes, observabilidad distribuida) que un
+  equipo de 1-2 personas no puede sostener durante el MVP.
+- Un monolito modular bien diseñado, con límites de módulo claros (cada módulo
+  expone una interfaz de servicio y no accede directamente a las tablas de
+  otro módulo salvo a través de su capa de repositorio), permite EXTRAER
+  cualquier módulo a un microservicio independiente en la Fase 4 sin reescribir
+  la lógica de negocio, solo cambiando el mecanismo de transporte.
+- El plan de negocio proyecta la necesidad de servicios independientes recién
+  en el Año 2 (API pública, integración LMS, app móvil): la arquitectura aquí
+  definida ya deja "costuras" (seams) preparadas para ese momento (ver sección
+  10.6 y ADR-001).
+
+3.2 Diagrama de arquitectura de alto nivel (vista de despliegue)
+--------------------------------------------------------------------------------
+
+                                   USUARIOS FINALES
+                  (estudiantes, docentes, traductores, bloggers)
+                                          |
+                                          v
+                         +----------------------------------+
+                         |     CLOUDFLARE (CDN + WAF +       |
+                         |   protección DDoS + Cache estático)|
+                         +----------------------------------+
+                                          |
+                  -----------------------------------------------
+                  |                                               |
+                  v                                               v
+   +-----------------------------+              +--------------------------------+
+   |   FRONTEND (Vercel)         |   HTTPS/REST  |   BACKEND (Railway)            |
+   |   React + Vite + Tailwind   |  ------------>|   FastAPI (ASGI / Uvicorn)     |
+   |   SPA servida como estático |  <------------|   /api/v1/...                  |
+   +-----------------------------+    JSON        +--------------------------------+
+                                                          |        |        |
+                                  -------------------------        |        ---------------
+                                  |                                |                       |
+                                  v                                v                       v
+                  +----------------------------+   +----------------------+   +------------------------+
+                  | PostgreSQL (Supabase/       |   | Redis (cache,        |   | Workers asíncronos      |
+                  | Railway Postgres)            |   | rate-limit, sesiones)|   | (Celery/RQ o            |
+                  | usuarios, análisis, planes,  |   +----------------------+   | BackgroundTasks)        |
+                  | pagos, perfiles docentes     |                              | exportación PDF/Excel,  |
+                  +----------------------------+                              | parsing de archivos,    |
+                                                                                | envío de emails         |
+                                                                                +------------------------+
+                                          |
+                  -----------------------------------------------------------------
+                  |                    |                     |                     |
+                  v                    v                     v                     v
+        +----------------+   +------------------+   +----------------+   +------------------+
+        | Culqi / Stripe |   | SMTP / SendGrid   |   | Sentry         |   | UptimeRobot       |
+        | (pasarela pago)|   | (emails: bienv.,  |   | (monitoreo de  |   | (monitoreo de     |
+        |                |   | reset pass, news.)|   | errores)       |   | disponibilidad)   |
+        +----------------+   +------------------+   +----------------+   +------------------+
+
+3.3 Principios de diseño aplicados
+-------------------------------------
+- SoC (Separation of Concerns): cada capa (API, dominio, persistencia) tiene
+  una sola responsabilidad y no conoce los detalles internos de las otras.
+- Dependency Inversion: las capas de dominio (services) dependen de
+  INTERFACES de repositorio, no de SQLAlchemy directamente; esto permite
+  testear la lógica de negocio sin base de datos real (mocks/fakes).
+- DRY pero no sobre-ingeniería: se evita abstraer prematuramente lo que solo
+  se usa una vez (YAGNI). El motor de análisis SÍ se abstrae (Strategy) porque
+  el plan de negocio ya define múltiples métricas que crecerán (Módulo 2 y
+  futura IA).
+- Fail-fast y validación en el borde: toda entrada de usuario se valida con
+  esquemas Pydantic antes de tocar la lógica de negocio.
+- Statelessness del backend: ninguna instancia del backend guarda estado en
+  memoria entre requests (las sesiones JWT y el caché viven en Redis), lo cual
+  permite escalar horizontalmente sin "sticky sessions".
+
+3.4 Patrones arquitectónicos aplicados
+-----------------------------------------
+- Layered Architecture (API -> Service -> Repository -> ORM -> DB).
+- Repository Pattern: abstrae el acceso a datos por entidad (UserRepository,
+  AnalysisRepository, etc.).
+- Strategy Pattern: cada métrica de análisis textual (legibilidad, densidad de
+  palabras clave, frecuencia, comparación) es una estrategia intercambiable
+  que implementa una interfaz común `TextAnalyzer`.
+- Factory Pattern: `FileParserFactory` decide qué parser usar (.txt/.docx/
+  .pdf/.odt/.rtf) según la extensión/MIME type del archivo subido.
+- DTO/Schema Pattern: Pydantic Schemas separan el modelo de dominio (interno)
+  del contrato de API (externo), evitando exponer columnas internas (ej.
+  password_hash) por accidente.
+- Dependency Injection nativa de FastAPI (`Depends`) para inyectar sesión de
+  base de datos, usuario autenticado, servicios, etc.
+- Unit of Work (ligero, vía sesión de SQLAlchemy) para garantizar atomicidad
+  en operaciones que tocan varias tablas (ej. crear análisis + descontar
+  cuota del plan).
+- Circuit breaker / retry con backoff exponencial para llamadas a servicios
+  externos críticos (pasarela de pago, SMTP) usando la librería `tenacity`.
+- Idempotency Key Pattern en el módulo de pagos (webhooks de Culqi/Stripe)
+  para evitar procesar dos veces el mismo evento de pago.
+
+
+================================================================================
+4. ARQUITECTURA DE BACKEND (PYTHON + FASTAPI)
+================================================================================
+
+4.1 Stack y librerías recomendadas
+--------------------------------------
+  Núcleo:
+    - Python 3.12+
+    - FastAPI (framework ASGI, documentación OpenAPI automática)
+    - Uvicorn (servidor ASGI; en producción detrás de Gunicorn con workers
+      Uvicorn: `gunicorn -k uvicorn.workers.UvicornWorker`)
+    - Pydantic v2 (validación de datos y settings)
+    - SQLAlchemy 2.0 (ORM, estilo async con `asyncpg`)
+    - Alembic (migraciones de base de datos versionadas)
+  Seguridad:
+    - python-jose o PyJWT (firmado/verificación de JWT)
+    - passlib[bcrypt] (hashing de contraseñas, factor de costo 12 según el
+      plan de negocio)
+    - slowapi (rate limiting compatible con FastAPI, respaldado por Redis)
+  Procesamiento de texto y NLP:
+    - regex (mejor soporte Unicode que el módulo `re` estándar para
+      tildes, eñe y signos de apertura)
+    - spaCy (modelo `es_core_news_sm` o superior) y/o NLTK con recursos en
+      español, para tokenización lingüística avanzada en el Módulo 2 y la
+      futura IA (Fase 4).
+  Procesamiento de archivos:
+    - python-docx (.docx)
+    - pdfplumber o PyMuPDF/fitz (.pdf) — PyMuPDF es preferible por rendimiento
+    - odfpy (.odt)
+    - striprtf (.rtf)
+  Exportación de reportes:
+    - WeasyPrint o ReportLab (.pdf de salida)
+    - openpyxl (.xlsx de salida)
+  Tareas asíncronas:
+    - FastAPI `BackgroundTasks` (suficiente para Fase 1-2: envío de emails,
+      limpieza de historial vencido)
+    - Celery + Redis como broker (a introducir en Fase 3 cuando el volumen de
+      procesamiento de archivos y exportes lo justifique)
+  Caché y rate limiting:
+    - redis-py (cliente async `redis.asyncio`)
+  Pagos:
+    - SDK oficial de Culqi (REST, vía `httpx`) y/o `stripe` SDK
+  Resiliencia:
+    - tenacity (retry/backoff)
+  Observabilidad:
+    - structlog (logging estructurado en JSON)
+    - sentry-sdk (captura de excepciones en producción)
+  Testing:
+    - pytest, pytest-asyncio, httpx (TestClient async), pytest-cov,
+      factory_boy, faker
+  Calidad de código:
+    - ruff (linter + formateador, reemplaza flake8+black+isort en un solo
+      binario, importante para mantener velocidad en equipo pequeño)
+    - mypy (chequeo de tipos estático)
+    - pre-commit (hooks de Git para ejecutar ruff/mypy antes de cada commit)
+
+4.2 Estructura de carpetas del backend
+------------------------------------------
+backend/
+├── app/
+│   ├── main.py                     (instancia FastAPI, montaje de routers,
+│   │                                 middlewares, eventos startup/shutdown)
+│   ├── core/
+│   │   ├── config.py               (Settings con pydantic-settings, lee .env)
+│   │   ├── security.py             (hashing, creación/verificación de JWT)
+│   │   ├── logging_config.py       (structlog, formato JSON)
+│   │   ├── exceptions.py           (excepciones de dominio + exception_handlers)
+│   │   └── dependencies.py         (get_db, get_current_user, get_current_
+│   │                                 active_premium_user, require_role(...))
+│   ├── api/
+│   │   └── v1/
+│   │       ├── router.py           (agrega todos los sub-routers con prefijo
+│   │       │                         /api/v1)
+│   │       └── endpoints/
+│   │           ├── auth.py         (register, login, refresh, logout)
+│   │           ├── users.py        (perfil, cambio de plan, preferencias, personalizar_diseno)
+│   │           ├── analysis.py     (POST /analysis/text, GET /analysis/{id}, GET /analysis/history,
+│   │           │                    POST /analysis/ai-detector -> escanea originalidad de IA,
+│   │           │                    POST /analysis/copilot -> resumen y títulos por IA,
+│   │           │                    POST /analysis/apa7 -> formateador de citas bibliográficas,
+│   │           │                    GET/POST /analysis/versions -> CRUD de 5 versiones de autoguardado)
+│   │           ├── files.py        (POST /files/upload -> parsea e ingresa .docx/.pdf/.txt,
+│   │           │                    POST /files/ocr -> extrae caracteres de fotos con Tesseract,
+│   │           │                    POST /files/sketch-analyzer -> describe dibujos conceptuales si OCR < 5 char)
+│   │           ├── reports.py      (GET /reports/{id}/export?format=pdf|xlsx)
+│   │           ├── teachers.py     (CRUD de perfiles docentes, enlaces)
+│   │           ├── institutions.py (panel , miembros, reportes)
+│   │           ├── payments.py     (checkout, webhooks Culqi/Stripe)
+│   │           ├── referrals.py    (programa de referidos)
+│   │           └── public_api.py   (API pública Año 2, autenticada con
+│   │                                 API Key, facturación por palabras)
+│   ├── schemas/                    (Pydantic: *_create, *_update, *_out)
+│   │   ├── user.py
+│   │   ├── analysis.py
+│   │   ├── auth.py
+│   │   ├── teacher.py
+│   │   ├── payment.py
+│   │   └── common.py               (paginación, respuestas de error estándar)
+│   ├── models/                     (ORM SQLAlchemy, 1 archivo por entidad)
+│   │   ├── user.py
+│   │   ├── analysis.py
+│   │   ├── subscription.py
+│   │   ├── payment.py
+│   │   ├── teacher_profile.py
+│   │   ├── institution.py
+│   │   ├── referral.py
+│   │   ├── api_key.py
+│   │   └── audit_log.py
+│   ├── repositories/                (1 clase por entidad, hereda de
+│   │   │                              BaseRepository genérico)
+│   │   ├── base_repository.py
+│   │   ├── user_repository.py
+│   │   ├── analysis_repository.py
+│   │   └── ...
+│   ├── services/
+│   │   ├── text_analysis/
+│   │   │   ├── base.py             (interfaz abstracta TextAnalyzer)
+│   │   │   ├── basic_counter.py    (palabras, caracteres, párrafos, etc.)
+│   │   │   ├── tokenizer_es.py     (tokenización UTF-8 específica español)
+│   │   │   ├── readability_fh.py   (índice Fernández-Huerta)
+│   │   │   ├── keyword_density.py
+│   │   │   ├── word_frequency.py   (nube de palabras / palabras únicas)
+│   │   │   ├── comparator.py       (modo comparación entre 2 textos)
+│   │   │   └── analysis_orchestrator.py (compone las estrategias según el
+│   │   │                                  plan del usuario)
+│   │   ├── file_parsers/
+│   │   │   ├── base.py             (interfaz FileParser)
+│   │   │   ├── factory.py          (FileParserFactory.get_parser(mime/ext))
+│   │   │   ├── txt_parser.py
+│   │   │   ├── docx_parser.py
+│   │   │   ├── pdf_parser.py
+│   │   │   ├── odt_parser.py
+│   │   │   └── rtf_parser.py
+│   │   ├── export/
+│   │   │   ├── pdf_exporter.py
+│   │   │   └── excel_exporter.py
+│   │   ├── auth_service.py
+│   │   ├── user_service.py
+│   │   ├── subscription_service.py (lógica de límites por plan: 5,000
+│   │   │                             palabras free, ilimitado premium, etc.)
+│   │   ├── payment_service.py      (integración Culqi/Stripe, idempotencia)
+│   │   ├── teacher_service.py      (perfiles, tokens de enlace compartible)
+│   │   ├── institution_service.py
+│   │   ├── referral_service.py
+│   │   └── notification_service.py (envío de emails transaccionales)
+│   ├── db/
+│   │   ├── base.py                 (Base declarativa SQLAlchemy)
+│   │   ├── session.py              (engine async, sessionmaker, get_db)
+│   │   └── migrations/             (carpeta gestionada por Alembic)
+│   ├── workers/
+│   │   ├── celery_app.py           (a introducir en Fase 3)
+│   │   └── tasks.py                (exportar_reporte, limpiar_historial_
+│   │                                 vencido, enviar_email_masivo)
+│   ├── middlewares/
+│   │   ├── rate_limit.py
+│   │   ├── request_id.py           (correlación de logs por request)
+│   │   └── error_handling.py
+│   └── utils/
+│       ├── text_utils.py           (regex de español: tildes, eñe, ¿¡)
+│       └── file_utils.py
+├── tests/
+│   ├── unit/                       (servicios y analizadores, sin BD)
+│   ├── integration/                (endpoints con BD de prueba/transacción)
+│   └── e2e/                        (flujos completos vía httpx AsyncClient)
+├── alembic.ini
+├── requirements.txt
+├── requirements-dev.txt
+├── pyproject.toml                  (config de ruff, mypy, pytest)
+├── Dockerfile
+├── docker-compose.yml              (postgres + redis + backend, para Windows
+│                                     vía Docker Desktop/WSL2)
+├── .env.example
+└── README.md
+
+4.3 Capas y responsabilidades (flujo de una petición)
+----------------------------------------------------------
+  Cliente HTTP
+      -> Middleware (CORS, request-id, rate limit)
+      -> Router/Endpoint (FastAPI): valida entrada con Pydantic Schema,
+         resuelve dependencias (`Depends(get_current_user)`)
+      -> Service (lógica de negocio pura, orquesta Repositorios y Strategies)
+      -> Repository (traduce operaciones de dominio a queries SQLAlchemy)
+      -> ORM / asyncpg -> PostgreSQL
+      <- Repository devuelve entidades de dominio/ORM
+      <- Service transforma a un resultado de negocio
+      <- Endpoint serializa con Pydantic Schema "*_out" (nunca el modelo ORM
+         directo, para no filtrar columnas sensibles)
+      <- Respuesta JSON al cliente
+
+Esta separación es la que permite, por ejemplo, testear `readability_fh.py`
+con un texto de prueba sin necesidad de levantar PostgreSQL ni FastAPI.
+
+4.4 Módulo central: Motor de Análisis Textual en Español
+--------------------------------------------------------------
+Este es el activo más importante del producto (Diferenciador Clave #1 del
+plan de negocio: "Español nativo"). Se diseña como un conjunto de
+ANALIZADORES intercambiables (Strategy Pattern) orquestados por un
+`AnalysisOrchestrator`, de modo que añadir una métrica nueva en el futuro
+(ej. una métrica de IA) NO requiere modificar código existente, solo agregar
+una clase nueva que implemente la interfaz `TextAnalyzer` (principio
+Open/Closed de SOLID).
+
+  Interfaz común (pseudo-código ilustrativo):
+
+    class TextAnalyzer(ABC):
+        @abstractmethod
+        def analyze(self, text: NormalizedText) -> dict: ...
+
+  Pipeline de análisis (todo análisis pasa por estos pasos, en orden):
+
+    1. Normalización de entrada:
+       - Conversión a UTF-8 garantizado.
+       - Preservación de tildes (á é í ó ú), eñe (ñ Ñ) y diéresis (ü).
+       - Detección y conteo de signos de apertura propios del español
+         (¿ ¡) sin que se confundan con los de cierre (? !).
+       - Normalización de saltos de línea (CRLF/LF/CR -> uniforme) porque el
+         texto puede provenir de archivos creados en Windows (CRLF) o
+         pegado desde fuentes con LF.
+
+    2. Tokenización en español (tokenizer_es.py):
+       - Segmentación de palabras respetando palabras compuestas con guión
+         (bien-estar, franco-peruano) como UNA sola palabra, según lo
+         exigido explícitamente en el plan de negocio (Problema 2).
+       - Segmentación de oraciones considerando abreviaturas comunes en
+         español (Sr., Sra., Dr., etc., p.ej.) para no cortar oraciones de
+         forma incorrecta.
+       - Conteo de sílabas (necesario para el índice de legibilidad) usando
+         reglas de silabeo del español (diptongos, hiatos, triptongos) — se
+         recomienda usar una librería especializada (ej. `pyphen` con
+         diccionario `es`) en vez de reinventar reglas fonéticas desde cero.
+
+    3. Analizadores Módulo 1 (Gratuito):
+       - BasicCounter: total de palabras, caracteres con/sin espacios,
+         párrafos, oraciones, líneas.
+       - ReadingTimeEstimator: tiempo de lectura (200 palabras/min, valor
+         configurable vía Settings) y tiempo de narración en voz alta.
+       - Todo expuesto vía WebSocket o polling ligero para "tiempo real" en
+         el frontend (ver sección 6.7 sobre debounce y opción de cálculo
+         100% en cliente para el conteo básico, evitando latencia de red).
+
+    4. Analizadores Módulo 2 (Premium):
+       - ReadabilityFernandezHuerta: calcula el índice de legibilidad en
+         español a partir del promedio de sílabas por palabra y el promedio
+         de palabras por oración. NOTA DE IMPLEMENTACION: las constantes
+         exactas de la fórmula deben validarse contra la fuente académica
+         original (Fernández Huerta, 1959, adaptación de Flesch para
+         castellano) durante el sprint de implementación; este documento
+         define el CONTRATO del servicio (entrada: texto normalizado,
+         salida: score 0-100 + categoría de dificultad), no el valor exacto
+         de cada constante.
+       - KeywordDensityAnalyzer: frecuencia y densidad porcentual de
+         términos, excluyendo stopwords en español (lista propia, ya que
+         las listas de stopwords en inglés no aplican).
+       - WordFrequencyAnalyzer: palabras únicas vs. repetidas, datos para
+         alimentar la nube de palabras (el cálculo pesado se hace en
+         backend; el RENDERIZADO visual de la nube ocurre en el frontend).
+       - FillerWordsDetector: detección de muletillas/palabras de relleno
+         en español ("o sea", "bueno", "entonces", etc.), lista
+         configurable en base de datos para poder ampliarla sin desplegar
+         código nuevo.
+       - TextComparator: ejecuta el pipeline completo sobre dos textos y
+         devuelve un diff de métricas.
+
+    5. Orquestación según plan del usuario (subscription_service.py decide
+       qué lista de analizadores se ejecuta: solo Módulo 1 si es plan
+       gratuito, Módulo 1+2 si es premium/). Esto centraliza
+       en UN solo lugar la regla de negocio "qué incluye cada plan", evitando
+       que esa lógica se disperse por todo el código (riesgo de
+       inconsistencias y de fuga de funcionalidad premium a usuarios free).
+
+4.5 Autenticación y autorización
+-------------------------------------
+  Modelo de autenticación:
+    - Acceso ANÓNIMO permitido para el Módulo 1 (conteo básico sin registro),
+      tal como exige el plan de negocio ("Sin registro para uso básico").
+      Estas peticiones se identifican únicamente por IP + rate limiting, sin
+      crear ninguna cuenta.
+    - Registro con email + contraseña (passlib/bcrypt, factor de costo 12).
+    - Login devuelve un par de tokens:
+        * access_token (JWT, vida corta: 15 minutos, firmado HS256 o RS256)
+        * refresh_token (vida larga: 7-30 días, almacenado hasheado en la
+          tabla refresh_tokens para poder revocarlo individualmente, p.ej.
+          en caso de robo de dispositivo — "logout en todos los dispositivos")
+    - Rotación de refresh tokens en cada uso (refresh token rotation) para
+      mitigar reuso de tokens robados.
+    - Soporte futuro (Fase 4) para login social (Google) vía OAuth2, sin que
+      esto requiera cambiar el modelo de usuario (se añade una tabla
+      `oauth_accounts` enlazada a `users`).
+
+  Autorización basada en roles y planes (RBAC + feature flags por plan):
+    Roles de sistema: anonymous, free_user, premium_user, teacher,
+    institution_admin, super_admin.
+    Esto se implementa con dependencias FastAPI reutilizables:
+
+        def require_role(*roles):
+            def checker(user: User = Depends(get_current_user)):
+                if user.role not in roles:
+                    raise HTTPException(403, "No autorizado")
+                return user
+            return checker
+
+    Y se combina con verificación de PLAN (no solo rol) para features como
+    "subir archivo" o "exportar reporte", ya que un mismo rol (free_user)
+    puede o no tener acceso según su plan vigente — de ahí que
+    `subscription_service.py` sea la única fuente de verdad sobre qué puede
+    hacer cada usuario en cada momento (incluyendo planes vencidos que deben
+    degradar automáticamente a "free" sin intervención manual).
+
+4.6 Gestión de usuarios, planes y suscripciones
+-----------------------------------------------------
+  Refleja exactamente los 4 planes del plan de negocio:
+    - Gratuito: S/0, hasta 5,000 palabras por análisis, Módulo 1 únicamente,
+      sin historial guardado (los análisis anónimos/free NO se persisten más
+      allá de la sesión, salvo que el usuario decida registrarse).
+    - Premium individual: S/15/mes o S/120/año, sin límite de palabras,
+      Módulos 1-3, historial de 90 días, exportación de reportes.
+    - : S/199/mes, hasta 100 usuarios activos, todo lo anterior
+      más Módulo 4 (herramientas docentes) y panel de administrador.
+    - API Developer (Año 2): facturación por uso (S/0.05 por 1,000 palabras
+      procesadas vía API), gestionado con `api_keys` y `api_usage_logs`.
+  Cada plan se modela como un registro en `subscriptions` con fecha de
+  vencimiento; un job programado (Celery beat o cron en Railway) degrada
+  automáticamente las suscripciones vencidas a "free" y notifica al usuario.
+
+4.7 Procesamiento de archivos subidos (.txt, .docx, .pdf, .odt, .rtf)
+---------------------------------------------------------------------------
+  Flujo:
+    1. Endpoint `/api/v1/files/upload` recibe `multipart/form-data`.
+    2. Validación de seguridad ANTES de procesar: tamaño máximo (ej. 10 MB),
+       MIME type real (no solo la extensión del nombre del archivo, para
+       evitar archivos disfrazados — se valida con "magic bytes" usando la
+       librería `python-magic` o el sniffing nativo de PyMuPDF/python-docx),
+       y escaneo básico de que el archivo no contenga macros activas en el
+       caso de .docx (mitigación de malware embebido).
+    3. `FileParserFactory` selecciona el parser correcto según MIME type real.
+    4. El parser extrae texto plano UTF-8 normalizado y lo entrega al mismo
+       pipeline de análisis del Módulo 1/2 (no existe un "motor de análisis
+       de archivos" separado: los archivos son solo otra FUENTE de texto que
+       alimenta el mismo motor, evitando duplicación de lógica).
+    5. El archivo original NO se almacena en disco permanente (solo se
+       procesa en memoria o en un directorio temporal que se elimina al
+       finalizar la request), salvo que el usuario premium decida guardar el
+       resultado en su historial (en cuyo caso se guardan las MÉTRICAS, no el
+       archivo original, salvo consentimiento explícito — alineado a la
+       cláusula de seguridad del plan de negocio: "textos analizados no
+       almacenados sin consentimiento explícito del usuario").
+
+4.8 Exportación de reportes (PDF / Excel)
+-----------------------------------------------
+  - `pdf_exporter.py`: genera un PDF con cabecera de marca, tabla de métricas
+    y (si aplica) la nube de palabras como imagen embebida.
+  - `excel_exporter.py`: genera un .xlsx con una hoja "Resumen" y una hoja
+    "Detalle de palabras frecuentes".
+  - Para archivos grandes o exportaciones masivas (reporte grupal del Módulo
+    4 ), la generación se delega a un worker asíncrono (Celery)
+    y se notifica al usuario por email cuando el archivo está listo, en vez
+    de bloquear la request HTTP (evita timeouts y mejora la métrica de
+    "tiempo de respuesta < 200ms" para el resto de endpoints).
+
+4.9 Integración de pagos (Culqi / Stripe)
+------------------------------------------
+  - Checkout: el backend crea una "intención de pago" y devuelve al frontend
+    los datos mínimos necesarios para que el SDK de Culqi/Stripe en el
+    cliente capture los datos de tarjeta (la tarjeta NUNCA toca el backend
+    propio, por cumplimiento PCI-DSS delegado al proveedor).
+  - Webhook: Culqi/Stripe notifica el resultado del cargo a un endpoint
+    dedicado (`/api/v1/payments/webhook/culqi`), protegido con verificación
+    de firma del proveedor.
+  - Idempotencia: cada evento de webhook se registra con su ID único del
+    proveedor en la tabla `payments`; si el mismo evento llega dos veces
+    (común en estos sistemas), se ignora la segunda vez.
+  - Tras un pago exitoso, `payment_service.py` activa la suscripción
+    correspondiente de forma transaccional (pago + activación de plan en una
+    sola unidad atómica de base de datos).
+
+4.10 Notificaciones
+-----------------------
+  - Emails transaccionales (bienvenida, verificación de cuenta, reset de
+    contraseña, confirmación de pago, recordatorio de vencimiento de plan)
+    vía SMTP o un proveedor como SendGrid/Resend (capa gratuita disponible).
+  - Newsletter quincenal: se delega a Mailchimp (tal como define el plan de
+    negocio) en la Fase 1-2; el backend solo expone un endpoint para
+    sincronizar la lista de suscriptores vía API de Mailchimp, evitando
+    construir un motor de email marketing propio (no es el core del negocio).
+
+4.11 Tareas asíncronas y background jobs
+---------------------------------------------
+  - Fase 1-2 (MVP): `FastAPI BackgroundTasks` es suficiente para tareas
+    cortas (enviar un email, registrar un log de auditoría) sin necesidad de
+    infraestructura adicional (sin Redis ni Celery todavía).
+  - Fase 3-4 (Comercialización/Escalabilidad): migración a Celery + Redis
+    como broker para tareas pesadas y/o programadas:
+      * Exportación de reportes grandes.
+      * Limpieza diaria de historial vencido (> 90 días).
+      * Degradación automática de planes vencidos.
+      * Reentrenamiento o actualización de listas de stopwords/muletillas.
+      * Procesamiento por lotes para la futura API pública (Año 2).
+
+4.12 Caché con Redis
+------------------------
+  Usos concretos:
+    - Caché de resultados de análisis para textos idénticos repetidos en
+      corto tiempo (hash SHA-256 del texto como clave), reduciendo carga de
+      CPU en picos de tráfico.
+    - Almacén distribuido para `slowapi` (rate limiting de 100 solicitudes
+      por minuto por IP, tal como exige el plan de negocio), necesario para
+      que el límite sea consistente si en el futuro hay más de una instancia
+      del backend corriendo (escalado horizontal).
+    - Caché de sesión/blacklist de tokens revocados (para invalidar un
+      access_token antes de su expiración natural, ej. al hacer logout).
+    - Caché de resultados costosos del Módulo 4 (reportes grupales
+      es) con invalidación al registrarse un nuevo análisis.
+
+4.13 Middlewares transversales
+-----------------------------------
+  - CORS: restringido a los dominios de Vercel del frontend (configuración
+    por entorno, nunca "*" en producción).
+  - Request-ID: cada request recibe un UUID que se propaga en los logs,
+    facilitando trazabilidad end-to-end al depurar un incidente reportado
+    por un usuario.
+  - Rate limiting (slowapi + Redis): 100 req/min por IP por defecto;
+    límites más estrictos en endpoints sensibles (login: 5 intentos/minuto
+    para mitigar fuerza bruta).
+  - Manejo global de errores: toda excepción no controlada se captura, se
+    registra en Sentry con el request-id, y se devuelve al cliente un JSON
+    de error estandarizado sin exponer detalles internos (stack traces) en
+    producción.
+
+4.14 Versionado y documentación de API
+-------------------------------------------
+  - Todas las rutas bajo el prefijo `/api/v1/`, lo que permite introducir
+    `/api/v2/` en el futuro sin romper integraciones existentes (crítico
+    para cuando exista la API pública de desarrolladores en el Año 2).
+  - Documentación automática vía OpenAPI (Swagger UI en `/docs`, ReDoc en
+    `/redoc`), generada nativamente por FastAPI a partir de los Schemas
+    Pydantic — esto se convierte en la futura documentación pública para
+    desarrolladores externos (Módulo "API Developer").
+
+4.15 Manejo de errores y logging
+--------------------------------------
+  - Jerarquía de excepciones de dominio propia (ej. `PlanLimitExceededError`,
+    `InvalidFileFormatError`, `InsufficientPermissionsError`) que se traducen
+    a códigos HTTP apropiados (402, 415, 403...) mediante exception_handlers
+    centralizados, en vez de usar `HTTPException` genéricas dispersas por
+    todo el código.
+  - Logging estructurado en JSON (structlog) con campos estándar: timestamp,
+    nivel, request_id, user_id (si aplica), endpoint, duración_ms.
+  - Integración con Sentry para alertas en tiempo real de errores 5xx en
+    producción (apoya el KPI técnico "Bugs críticos en producción = 0").
+
+4.16 Estrategia de testing del backend
+--------------------------------------------
+  - Unit tests: cada analizador del motor de texto (BasicCounter,
+    ReadabilityFernandezHuerta, etc.) se prueba con casos de prueba en
+    español que incluyan explícitamente tildes, eñe, signos ¿¡ y palabras
+    compuestas con guión — esto es la prueba de regresión más importante del
+    proyecto, dado que es el diferenciador clave del producto. Para garantizar
+    la sincronización exacta con el frontend (Módulo 1), los casos de prueba
+    de conteo básico se centralizan en un archivo `shared/golden_tests.json`
+    en la raíz del repositorio, consumido automáticamente por ambas suites de
+    pruebas (pytest y vitest).
+  - Integration tests: endpoints completos contra una base de datos de
+    pruebas (PostgreSQL en contenedor Docker, con rollback de transacción
+    tras cada test para aislamiento).
+  - E2E tests: flujos completos (registro -> login -> análisis -> upgrade a
+    premium -> exportación) ejecutados contra el servidor de pruebas vía
+    `httpx.AsyncClient`.
+  - Cobertura mínima objetivo: 80% en el módulo `services/text_analysis/`
+    (el más crítico), 60%+ en el resto.
+  - Estos tests corren automáticamente en CI antes de cada despliegue (ver
+    sección 9.4).
+
+4.17 Ejemplo de convención de código (referencial)
+---------------------------------------------------------
+  Ejemplo simplificado de cómo se ve la composición de capas en la práctica
+  (solo ilustrativo, no es el código final de producción):
+
+    # services/text_analysis/base.py
+    class TextAnalyzer(ABC):
+        @abstractmethod
+        def analyze(self, text: str) -> dict: ...
+
+    # services/text_analysis/basic_counter.py
+    class BasicCounter(TextAnalyzer):
+        def analyze(self, text: str) -> dict:
+            words = spanish_tokenizer.tokenize_words(text)
+            return {
+                "word_count": len(words),
+                "char_count": len(text),
+                "char_count_no_spaces": len(text.replace(" ", "")),
+            }
+
+    # api/v1/endpoints/analysis.py
+    @router.post("/analysis/text", response_model=AnalysisOut)
+    async def analyze_text(
+        payload: AnalysisCreate,
+        current_user: User | None = Depends(get_optional_current_user),
+        db: AsyncSession = Depends(get_db),
+    ):
+        result = await analysis_orchestrator.run(payload.text, current_user)
+        if current_user:
+            await analysis_repository.save(db, current_user.id, result)
+        return result
+
+
+================================================================================
+5. ARQUITECTURA DE BASE DE DATOS (POSTGRESQL)
+================================================================================
+
+5.1 Modelo relacional - entidades principales
+--------------------------------------------------
+  users                  -> cuentas de usuario (free, premium, docente, admin)
+  refresh_tokens         -> tokens de sesión de larga duración (revocables)
+  subscriptions          -> historial y estado de planes por usuario
+  payments               -> registro de transacciones (Culqi/Stripe)
+  analyses               -> cada análisis de texto guardado (premium/historial)
+  analysis_keywords      -> palabras clave/frecuencias de cada análisis
+  teacher_profiles       -> perfiles de límite de palabras creados por docentes
+  profile_submissions    -> envíos de alumnos validados contra un perfil
+  institutions           -> cuentas es (universidades/colegios)
+  institution_members     -> relación N:M usuarios <-> institución
+  referrals              -> programa de referidos
+  api_keys               -> claves para la futura API pública (Año 2)
+  api_usage_logs         -> consumo por API key (para facturación por uso)
+  audit_logs             -> trazabilidad de acciones sensibles
+  newsletter_subscribers -> integración con email marketing
+
+5.2 Diagrama Entidad-Relación (representación textual)
+------------------------------------------------------------
+  users (1) ----------------- (N) subscriptions
+  users (1) ----------------- (N) refresh_tokens
+  users (1) ----------------- (N) analyses                 [user_id nullable
+                                                              para análisis
+                                                              anónimos free]
+  users (1) ----------------- (N) teacher_profiles
+  users (1) ----------------- (N) api_keys
+  users (1) ----------------- (N) referrals   [como referrer_user_id]
+  users (1) ----------------- (1) referrals   [como referred_user_id]
+  users (N) ----------------- (N) institutions  (vía institution_members)
+
+  subscriptions (1) --------- (N) payments
+
+  analyses (1) --------------- (N) analysis_keywords
+
+  teacher_profiles (1) ------- (N) profile_submissions
+  profile_submissions (1) ---- (1) analyses   [un envío referencia un análisis]
+
+  institutions (1) ----------- (N) institution_members
+  institutions (1) ----------- (N) teacher_profiles  [perfiles es]
+
+  api_keys (1) ---------------- (N) api_usage_logs
+
+  Notación: (1) uno, (N) muchos. Claves foráneas con ON DELETE definido caso
+  por caso (ej. analyses.user_id usa ON DELETE SET NULL para no perder
+  estadísticas agregadas si un usuario elimina su cuenta; payments usa ON
+  DELETE RESTRICT para preservar integridad contable).
+
+5.3 Diccionario de datos (tablas principales)
+----------------------------------------------------
+
+  TABLA: users
+  --------------------------------------------------------------------------
+  id                  UUID PK, default gen_random_uuid()
+  email               VARCHAR(255) UNIQUE NOT NULL
+  password_hash       VARCHAR(255) NOT NULL   (bcrypt, nunca texto plano)
+  full_name           VARCHAR(150)
+  role                VARCHAR(30) NOT NULL DEFAULT 'free_user'
+                      CHECK (role IN ('free_user','premium_user','teacher',
+                                       'institution_admin','super_admin'))
+  email_verified      BOOLEAN NOT NULL DEFAULT false
+  is_active           BOOLEAN NOT NULL DEFAULT true
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+  last_login_at       TIMESTAMPTZ
+  Índices: UNIQUE(email); INDEX(role) para consultas de panel admin.
+
+  TABLA: refresh_tokens
+  --------------------------------------------------------------------------
+  id            UUID PK
+  user_id       UUID FK -> users.id ON DELETE CASCADE
+  token_hash    VARCHAR(255) NOT NULL  (se guarda el HASH, no el token crudo)
+  device_info   VARCHAR(255)
+  revoked       BOOLEAN NOT NULL DEFAULT false
+  expires_at    TIMESTAMPTZ NOT NULL
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+  Índices: INDEX(user_id), INDEX(expires_at) para limpieza programada.
+
+  TABLA: subscriptions
+  --------------------------------------------------------------------------
+  id              UUID PK
+  user_id         UUID FK -> users.id ON DELETE CASCADE
+  plan_type       VARCHAR(20) CHECK (plan_type IN
+                  ('free','premium_monthly','premium_annual','institutional'))
+  status          VARCHAR(20) CHECK (status IN
+                  ('active','expired','cancelled','past_due'))
+  start_date      DATE NOT NULL
+  end_date        DATE
+  amount          NUMERIC(10,2)
+  currency        VARCHAR(3) DEFAULT 'PEN'
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+  Índices: INDEX(user_id, status) para resolver "plan vigente" rápidamente.
+
+  TABLA: payments
+  --------------------------------------------------------------------------
+  id                    UUID PK
+  subscription_id       UUID FK -> subscriptions.id
+  user_id               UUID FK -> users.id
+  provider              VARCHAR(20) CHECK (provider IN ('culqi','stripe'))
+  provider_payment_id   VARCHAR(255) UNIQUE NOT NULL   (clave de idempotencia)
+  amount                NUMERIC(10,2) NOT NULL
+  currency              VARCHAR(3) NOT NULL
+  status                VARCHAR(20)  ('pending','succeeded','failed','refunded')
+  raw_payload           JSONB         (payload crudo del webhook, auditoría)
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+  Índices: UNIQUE(provider_payment_id) — garantiza idempotencia a nivel BD.
+
+  TABLA: analyses
+  --------------------------------------------------------------------------
+  id                      UUID PK
+  user_id                 UUID FK -> users.id ON DELETE SET NULL (NULL = anónimo)
+  source_type             VARCHAR(10) CHECK (source_type IN ('text','file'))
+  original_filename       VARCHAR(255)
+  word_count              INTEGER NOT NULL
+  char_count              INTEGER NOT NULL
+  char_count_no_spaces    INTEGER NOT NULL
+  paragraph_count         INTEGER NOT NULL
+  sentence_count          INTEGER NOT NULL
+  line_count              INTEGER NOT NULL
+  reading_time_seconds    INTEGER
+  readability_score       NUMERIC(5,2)        (solo premium)
+  lexical_density         NUMERIC(5,2)        (solo premium)
+  ai_probability          NUMERIC(5,2)        (solo premium - ChatGPT Detector)
+  ocr_processed           BOOLEAN DEFAULT false
+  created_at              TIMESTAMPTZ NOT NULL DEFAULT now()
+  expires_at              TIMESTAMPTZ          (now() + 90 días para premium)
+  Índices: INDEX(user_id, created_at DESC) para historial paginado;
+           INDEX(expires_at) para el job de limpieza automática.
+  NOTA: el TEXTO ORIGINAL NUNCA se guarda en esta tabla, solo las métricas
+  derivadas, salvo consentimiento explícito adicional (cumplimiento Ley
+  29733 y la cláusula de seguridad del plan de negocio).
+
+  TABLA: user_versions
+  --------------------------------------------------------------------------
+  id                      UUID PK, default gen_random_uuid()
+  user_id                 UUID FK -> users.id ON DELETE CASCADE
+  content                 TEXT NOT NULL
+  word_count              INTEGER NOT NULL
+  saved_at                TIMESTAMPTZ NOT NULL DEFAULT now()
+  Índices: INDEX(user_id, saved_at DESC) — guarda las 5 últimas versiones.
+
+  TABLA: analysis_keywords
+  --------------------------------------------------------------------------
+  id              UUID PK
+  analysis_id     UUID FK -> analyses.id ON DELETE CASCADE
+  keyword         VARCHAR(100) NOT NULL
+  frequency       INTEGER NOT NULL
+  density_pct     NUMERIC(5,2) NOT NULL
+  Índices: INDEX(analysis_id).
+
+  TABLA: teacher_profiles
+  --------------------------------------------------------------------------
+  id                UUID PK
+  user_id           UUID FK -> users.id  (el docente creador)
+  institution_id    UUID FK -> institutions.id NULL
+  profile_name      VARCHAR(150) NOT NULL
+  min_words         INTEGER
+  max_words         INTEGER
+  share_token       VARCHAR(64) UNIQUE NOT NULL  (para el enlace compartible)
+  is_active         BOOLEAN DEFAULT true
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+  expires_at        TIMESTAMPTZ
+  Índices: UNIQUE(share_token) — usado para resolver el enlace público sin
+  exponer el id interno (evita IDOR / enumeración).
+
+  TABLA: profile_submissions
+  --------------------------------------------------------------------------
+  id                  UUID PK
+  profile_id          UUID FK -> teacher_profiles.id ON DELETE CASCADE
+  analysis_id         UUID FK -> analyses.id
+  student_label       VARCHAR(150)   (campo libre opcional, sin PII obligatoria)
+  passed_validation   BOOLEAN NOT NULL
+  submitted_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+  Índices: INDEX(profile_id, submitted_at).
+
+  TABLA: institutions
+  --------------------------------------------------------------------------
+  id              UUID PK
+  name            VARCHAR(200) NOT NULL
+  plan_type       VARCHAR(20) DEFAULT 'institutional'
+  max_users       INTEGER DEFAULT 100
+  admin_user_id   UUID FK -> users.id
+  logo_url        VARCHAR(255)
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+
+  TABLA: institution_members
+  --------------------------------------------------------------------------
+  id                UUID PK
+  institution_id    UUID FK -> institutions.id ON DELETE CASCADE
+  user_id           UUID FK -> users.id ON DELETE CASCADE
+  role_in_institution VARCHAR(20)  ('teacher','student','admin')
+  joined_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+  Índices: UNIQUE(institution_id, user_id).
+
+  TABLA: referrals
+  --------------------------------------------------------------------------
+  id                    UUID PK
+  referrer_user_id      UUID FK -> users.id
+  referred_user_id      UUID FK -> users.id UNIQUE  (un usuario solo puede
+                                                       ser referido una vez)
+  status                VARCHAR(20) ('pending','rewarded')
+  reward_days_granted    INTEGER DEFAULT 15
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+
+  TABLA: api_keys (Año 2)
+  --------------------------------------------------------------------------
+  id              UUID PK
+  user_id         UUID FK -> users.id
+  key_hash        VARCHAR(255) UNIQUE NOT NULL
+  name            VARCHAR(100)
+  rate_limit_tier VARCHAR(20) DEFAULT 'standard'
+  is_active       BOOLEAN DEFAULT true
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+  last_used_at    TIMESTAMPTZ
+
+  TABLA: api_usage_logs (Año 2)
+  --------------------------------------------------------------------------
+  id              BIGSERIAL PK   (volumen alto, se prefiere serial sobre UUID)
+  api_key_id      UUID FK -> api_keys.id
+  endpoint        VARCHAR(100)
+  words_processed INTEGER NOT NULL
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+  Índices: INDEX(api_key_id, created_at) — usado para agregaciones de
+  facturación mensual (S/0.05 por 1,000 palabras).
+
+  TABLA: audit_logs
+  --------------------------------------------------------------------------
+  id              BIGSERIAL PK
+  user_id         UUID FK -> users.id NULL
+  action          VARCHAR(100) NOT NULL  (ej. 'login_failed', 'plan_upgraded')
+  entity_type     VARCHAR(50)
+  entity_id       UUID
+  ip_address      INET
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+
+5.4 Índices y rendimiento
+--------------------------------
+  - Toda clave foránea tiene un índice explícito (PostgreSQL no los crea
+    automáticamente, a diferencia de la clave primaria).
+  - Índices compuestos en columnas usadas frecuentemente juntas en WHERE/
+    ORDER BY (ej. `(user_id, created_at DESC)` en `analyses` para el
+    historial paginado).
+  - Particionamiento por rango de fecha en `analyses` y `api_usage_logs` se
+    evalúa a partir de la Fase 4 si el volumen supera varios millones de
+    filas (PostgreSQL declarative partitioning), no es necesario en el MVP.
+  - `EXPLAIN ANALYZE` debe ejecutarse sobre las consultas del panel
+     (reporte grupal) antes de cada release, ya que es la
+    consulta con mayor riesgo de N+1 o full table scan al crecer la base de
+    usuarios.
+
+5.5 Migraciones con Alembic
+------------------------------------
+  - Toda modificación al esquema se hace exclusivamente a través de
+    migraciones versionadas de Alembic (`alembic revision --autogenerate -m
+    "descripcion"` seguido de revisión manual del script generado).
+  - Prohibido modificar el esquema de producción manualmente vía pgAdmin o
+    cualquier cliente SQL directo: rompe la trazabilidad y genera deuda
+    técnica (riesgo R7 del plan de negocio).
+  - Cada Pull Request que modifique `models/` debe incluir su migración
+    correspondiente como parte del mismo commit.
+
+5.6 Retención, backups y cumplimiento legal (Ley N.° 29733)
+--------------------------------------------------------------------
+  - Historial de análisis: retención de 90 días para usuarios premium (tal
+    como define el plan de negocio), eliminado automáticamente después por
+    un job programado.
+  - Usuarios gratuitos/anónimos: ningún dato de texto se persiste más allá
+    de la respuesta HTTP.
+  - Derecho de eliminación: endpoint `DELETE /api/v1/users/me` que elimina o
+    anonimiza en cascada los datos personales del usuario (cumplimiento de
+    los derechos ARCO bajo la Ley 29733).
+  - Backups automáticos de la base de datos cada 24 horas con retención de 7
+    días (tal como define el plan de negocio), gestionados por el proveedor
+    cloud (Supabase/Railway) en la Fase 1-2, con exportes adicionales
+    (`pg_dump`) almacenados en un bucket separado a partir de la Fase 3 como
+    capa extra de seguridad ante fallos del proveedor.
+
+
+================================================================================
+6. ARQUITECTURA DE FRONTEND (REACT + VITE + TAILWIND)
+================================================================================
+
+6.1 Stack y librerías recomendadas
+----------------------------------------
+  - React 18+ con TypeScript 5+
+  - Vite 5+ (bundler — arranque y HMR casi instantáneos, clave para la
+    productividad de un equipo de 1 desarrollador frontend)
+  - Tailwind CSS 3+ (utility-first, permite construir la interfaz "limpia y
+    minimalista" exigida por el plan de negocio sin escribir CSS a mano)
+  - TanStack Query (React Query) v5 — gestión de estado de SERVIDOR (caché,
+    revalidación, reintentos automáticos de llamadas a la API)
+  - Zustand — gestión de estado de CLIENTE (UI local: tema, modal abierto,
+    preferencias), más simple que Redux para el tamaño de este proyecto
+  - React Router v6 — enrutamiento de la SPA
+  - react-hook-form + zod — formularios performantes y validación de
+    esquemas (el mismo esquema zod puede compartir forma con los Pydantic
+    schemas del backend, manteniendo consistencia de contrato)
+  - axios — cliente HTTP con interceptores (inyección de JWT, refresh
+    automático en 401)
+  - lucide-react — iconografía consistente y liviana
+  - recharts — gráficos simples (ej. evolución de palabras en modo
+    comparación)
+  - react-wordcloud o implementación propia con D3 — nube de palabras
+  - Vitest + React Testing Library — testing unitario/componentes
+  - Playwright — testing end-to-end (simula el flujo real de un usuario en
+    el navegador)
+  - ESLint + Prettier (o `biome` como alternativa unificada) — calidad de
+    código consistente
+
+6.2 Estructura de carpetas del frontend
+---------------------------------------------
+frontend/
+├── public/
+├── src/
+│   ├── main.tsx
+│   ├── App.tsx                      (providers globales: QueryClient,
+│   │                                  Router, ThemeProvider)
+│   ├── assets/
+│   ├── components/                  (componentes de UI puros, sin lógica
+│   │   │                              de negocio — Atomic Design)
+│   │   ├── atoms/                   (Button, Input, Badge, Spinner...)
+│   │   ├── molecules/               (MetricCard, FileDropzone, PlanBadge)
+│   │   ├── organisms/               (TextEditorPanel, MetricsDashboard,
+│   │   │                              WordCloudPanel, ComparisonView)
+│   │   └── templates/               (AppLayout, AuthLayout, DashboardLayout)
+│   ├── features/                    (módulos por dominio funcional, cada
+│   │   │                              uno con sus propios hooks/componentes
+│   │   │                              específicos — escala mejor que una
+│   │   │                              carpeta "pages" plana al crecer)
+│   │   ├── text-analysis/
+│   │   │   ├── hooks/useRealtimeCount.ts
+│   │   │   ├── hooks/useAnalysisMutation.ts
+│   │   │   └── components/
+│   │   ├── file-upload/
+│   │   ├── auth/
+│   │   ├── subscription/
+│   │   ├── teacher-tools/
+│   │   └── institution-admin/
+│   ├── pages/                       (componentes de ruta, "delgados": solo
+│   │   │                              componen features + layout)
+│   │   ├── HomePage.tsx
+│   │   ├── DashboardPage.tsx
+│   │   ├── LoginPage.tsx / RegisterPage.tsx
+│   │   ├── PricingPage.tsx
+│   │   ├── TeacherProfilePage.tsx
+│   │   ├── SharedLinkPage.tsx       (vista pública del enlace del docente)
+│   │   └── InstitutionAdminPage.tsx
+│   ├── hooks/                       (hooks genéricos transversales)
+│   ├── services/
+│   │   └── api/
+│   │       ├── client.ts            (instancia axios + interceptores)
+│   │       ├── authApi.ts
+│   │       ├── analysisApi.ts
+│   │       ├── filesApi.ts
+│   │       └── paymentsApi.ts
+│   ├── store/                       (Zustand stores: authStore, uiStore)
+│   ├── lib/                         (validators zod, formatters, constantes)
+│   ├── types/                       (tipos TS compartidos / generados desde
+│   │                                  el esquema OpenAPI del backend, ver
+│   │                                  6.6)
+│   ├── workers/
+│   │   └── textMetrics.worker.ts    (Web Worker para cálculo de conteo
+│   │                                  básico en CLIENTE sobre textos muy
+│   │                                  largos, sin congelar la UI)
+│   ├── styles/
+│   │   └── index.css                (directivas de Tailwind + tokens
+│   │                                  personalizados de la paleta de marca)
+│   └── router/
+│       └── AppRouter.tsx
+├── tests/
+│   ├── unit/
+│   └── e2e/
+├── .env.example
+├── index.html
+├── vite.config.ts
+├── tailwind.config.ts
+├── postcss.config.js
+├── tsconfig.json
+├── eslint.config.js
+└── package.json
+
+6.3 Arquitectura de componentes (Atomic Design + Feature-based)
+-----------------------------------------------------------------------
+  Se combina Atomic Design (para los componentes de UI puramente visuales y
+  reutilizables: atoms/molecules/organisms/templates) con una organización
+  FEATURE-BASED (para la lógica de negocio específica de cada dominio:
+  text-analysis, file-upload, auth, etc.). Esto evita el anti-patrón de una
+  carpeta "components" gigante donde se mezclan botones genéricos con lógica
+  de negocio de pagos, y facilita que un futuro desarrollador adicional
+  (Año 2) pueda trabajar en un feature completo sin tocar el resto.
+
+6.4 Gestión de estado
+---------------------------
+  - Estado de SERVIDOR (datos que viven en el backend: historial de
+    análisis, perfil del usuario, planes) -> TanStack Query. Ventajas
+    directamente relevantes al plan de negocio: caché automático (reduce
+    llamadas a la API y por tanto carga en el backend gratuito de Railway),
+    reintentos automáticos (mejora la métrica de disponibilidad percibida),
+    invalidación declarativa al mutar datos (ej. al crear un análisis,
+    invalida automáticamente la query del historial).
+  - Estado de CLIENTE puro (UI local, no persistente en backend) -> Zustand:
+    tema claro/oscuro, estado de modales, preferencias de visualización del
+    panel de métricas.
+  - Estado del TEXTO en edición (el textarea principal) -> estado local de
+    React (`useState`/`useReducer`) con debounce, NUNCA en Zustand/Query,
+    para evitar renders innecesarios en el resto de la app mientras el
+    usuario escribe.
+
+6.5 Enrutamiento
+---------------------
+  React Router v6 con rutas protegidas mediante un componente
+  `<ProtectedRoute roles={[...]}>` que verifica el estado de `authStore`
+  (Zustand) antes de renderizar, redirigiendo a `/login` si corresponde.
+  Rutas públicas: `/`, `/precios`, `/r/:shareToken` (enlace compartible del
+  docente). Rutas protegidas: `/dashboard`, `/historial`, `/admin/*`.
+
+6.6 Cliente API y manejo de autenticación
+------------------------------------------------
+  - Instancia única de axios (`services/api/client.ts`) con:
+      * interceptor de REQUEST: adjunta el `access_token` vigente desde
+        `authStore` en el header `Authorization: Bearer ...`.
+      * interceptor de RESPONSE: si la respuesta es 401, intenta refrescar
+        el token automáticamente con el `refresh_token` (una sola vez, con
+        cola de reintentos para no disparar múltiples refresh en paralelo
+        si varias peticiones fallan a la vez) y reintenta la petición
+        original; si el refresh también falla, fuerza logout.
+  - Los tipos TypeScript de las respuestas de la API se generan, idealmente,
+    de forma AUTOMÁTICA a partir del esquema OpenAPI que FastAPI expone en
+    `/api/v1/openapi.json` (usando `openapi-typescript`), eliminando la
+    duplicación manual de tipos entre backend y frontend y evitando
+    desincronización de contratos — práctica de vanguardia recomendada para
+    mantener velocidad con un equipo pequeño.
+
+6.7 Conteo en tiempo real: decisión de UX y rendimiento
+--------------------------------------------------------------
+  Esta es una decisión arquitectónica importante porque el plan de negocio
+  exige actualización "en tiempo real mientras el usuario escribe":
+    - Para el MODULO 1 (conteo básico: palabras, caracteres, párrafos,
+      oraciones, líneas, tiempo de lectura): el cálculo se ejecuta
+      DIRECTAMENTE EN EL CLIENTE (JavaScript/TypeScript en el navegador),
+      replicando la misma lógica de tokenización en español que el backend
+      (idealmente generada desde una única especificación o, como mínimo,
+      cubierta por los mismos casos de prueba en ambos lados). Esto elimina
+      la latencia de red para la funcionalidad gratuita de mayor uso, reduce
+      drásticamente la carga sobre el backend gratuito de Railway, y mejora
+      la métrica de "tiempo en sitio" del embudo de marketing.
+    - Para textos muy largos (> ~20,000 caracteres), el cálculo se delega a
+      un Web Worker (`textMetrics.worker.ts`) para no bloquear el hilo
+      principal de la UI.
+    - El input se debounce (~150-250ms) antes de recalcular, balanceando
+      "tiempo real" percibido con eficiencia.
+    - Para el MODULO 2 (legibilidad, densidad de palabras clave, nube de
+      palabras — premium), el cálculo SÍ se delega al backend, ya que
+      requiere recursos NLP más pesados (spaCy/silabeo) que no es práctico
+      replicar en el navegador; aquí se usa un debounce mayor (~600-800ms) y
+      una mutación de TanStack Query antes de llamar a la API, evitando
+      saturar el backend con una petición por cada tecla presionada.
+
+6.8 Formularios y validación
+------------------------------------
+  react-hook-form (rendimiento: evita re-renders en cada tecla) combinado
+  con zod para esquemas de validación declarativos, replicando en el cliente
+  las mismas reglas que Pydantic valida en el backend (ej. longitud de
+  contraseña, formato de email) para dar feedback instantáneo al usuario sin
+  esperar una respuesta del servidor, sin que esto reemplace nunca la
+  validación del backend (la validación de cliente es UX, no seguridad).
+
+6.9 Sistema de diseño con Tailwind
+-----------------------------------------
+  - Paleta y tokens de diseño centralizados en `tailwind.config.ts`
+    (extendiendo `theme.colors`, `theme.fontFamily`) para que el "Diseño
+    minimalista" y "sin publicidad invasiva" exigido por el plan de negocio
+    sea consistente en toda la app sin valores mágicos repetidos.
+  - Modo oscuro soportado desde el día 1 vía la estrategia `class` de
+    Tailwind (`darkMode: 'class'`), ya que es una expectativa estándar en
+    herramientas de productividad modernas (relevante para diferenciarse
+    frente a competidores como WordCounter.net, que no lo ofrecen).
+  - Componentes base totalmente accesibles (ver 6.11) antes de aplicar
+    estilos, evitando que Tailwind se use para "maquetar" elementos
+    semánticamente incorrectos (ej. usar `<div onClick>` en vez de
+    `<button>`).
+
+6.10 Testing del frontend
+--------------------------------
+  - Vitest + React Testing Library para componentes y hooks (ej. verificar
+    que `useRealtimeCount` cuenta correctamente "café" como 4 caracteres y 1
+    palabra, o que "¿Cómo estás?" cuenta los signos de apertura propios del
+    español correctamente).
+  - Playwright para flujos E2E críticos: pegar texto y ver el conteo
+    actualizarse, registrar una cuenta, subir un archivo .docx y ver el
+    resultado, completar un pago de prueba en modo sandbox de Culqi/Stripe.
+
+6.11 Accesibilidad e internacionalización
+------------------------------------------------
+  - Cumplimiento WCAG 2.1 nivel AA como meta mínima: contraste de color
+    adecuado, navegación completa por teclado, etiquetas ARIA en el panel de
+    métricas en tiempo real (`aria-live="polite"` para que lectores de
+    pantalla anuncien el conteo actualizado sin interrumpir agresivamente al
+    usuario).
+  - Internacionalización (i18next) preparada desde la estructura de
+    carpetas aunque el MVP sea 100% español, pensando en la expansión a
+    Colombia/México del Año 2 (variaciones léxicas regionales del español
+    podrían eventualmente requerir ajustes, aunque la base gramatical es
+    compartida).
+
+6.12 Build, optimización y PWA futura
+--------------------------------------------
+  - Code splitting automático por ruta (Vite + React Router v6 con `lazy()`)
+    para que el panel /admin no infle el bundle inicial que
+    descarga un usuario anónimo que solo quiere contar palabras.
+  - Service Worker / PWA (vite-plugin-pwa) evaluado como mejora de Fase 3-4
+    para permitir uso offline básico del conteo (Módulo 1 ya corre 100% en
+    cliente, por lo que técnicamente es viable sin conexión).
+
+
+================================================================================
+7. FLUJOS CRITICOS DEL SISTEMA (DIAGRAMAS DE SECUENCIA EN TEXTO)
+================================================================================
+
+7.1 Conteo en tiempo real SIN registro (Caso de Uso 1 del plan de negocio)
+--------------------------------------------------------------------------------
+  Usuario -> Frontend: escribe/pega texto en el editor
+  Frontend -> Frontend: debounce 150-250ms
+  Frontend -> Frontend: ejecuta tokenizador en español (cliente, Módulo 1)
+  Frontend -> Usuario: muestra contador actualizado (sin llamar al backend)
+  [Backend NO se involucra en este flujo — por diseño, para minimizar costo
+   de infraestructura y maximizar percepción de velocidad]
+
+7.2 Traductor sube archivo .docx para facturación (Caso de Uso 2)
+--------------------------------------------------------------------------------
+  Usuario -> Frontend: arrastra archivo .docx al FileDropzone
+  Frontend -> Backend: POST /api/v1/files/upload (multipart, JWT si logueado)
+  Backend -> Middleware: rate limit + validación de tamaño/MIME real
+  Backend -> FileParserFactory: selecciona DocxParser
+  Backend -> DocxParser: extrae texto plano normalizado
+  Backend -> AnalysisOrchestrator: ejecuta Módulo 1 (+ Módulo 2 si premium)
+  Backend -> PostgreSQL: guarda métricas en `analyses` (si usuario autenticado
+                          y con consentimiento de historial)
+  Backend -> Frontend: 200 OK + JSON con todas las métricas
+  Frontend -> Usuario: muestra panel de resultados + botón "Exportar"
+
+7.3 Docente crea perfil y comparte enlace (Caso de Uso 3)
+--------------------------------------------------------------------------------
+  Docente -> Frontend: completa formulario "min 800 / max 1000 palabras"
+  Frontend -> Backend: POST /api/v1/teachers/profiles
+  Backend -> Validación: require_role('teacher','institution_admin')
+  Backend -> PostgreSQL: INSERT en teacher_profiles con share_token único
+  Backend -> Frontend: devuelve URL pública (ej. wordcountpro.pe/r/AbC123)
+  Docente -> WhatsApp/Email: comparte la URL con sus alumnos
+  Alumno -> Frontend (ruta pública /r/:token): pega su texto
+  Frontend -> Backend: GET /api/v1/teachers/profiles/by-token/AbC123
+                        (obtiene min/max, sin requerir login del alumno)
+  Frontend -> Frontend: valida en tiempo real si el conteo (cliente) está
+                        dentro del rango [min, max]
+  Frontend -> Backend (opcional, al "Confirmar entrega"): POST .../submissions
+  Backend -> PostgreSQL: INSERT en profile_submissions (passed_validation)
+  Docente -> Frontend: ve reporte agregado de cuántos alumnos cumplieron
+
+7.4 Pago y upgrade a Premium
+--------------------------------------------------------------------------------
+  Usuario -> Frontend: selecciona "Premium Anual" en /precios
+  Frontend -> Backend: POST /api/v1/payments/checkout-intent
+  Backend -> Culqi/Stripe API: crea intención de cobro
+  Backend -> Frontend: devuelve client_secret / token de checkout
+  Frontend -> Culqi/Stripe SDK (en el navegador del usuario): captura tarjeta
+                                                              de forma directa
+                                                              (no pasa por
+                                                              nuestro backend)
+  Culqi/Stripe -> Backend: webhook POST /payments/webhook/{provider}
+  Backend -> Verificación de firma del webhook
+  Backend -> idempotencia: ¿provider_payment_id ya existe? -> si sí, ignora
+  Backend -> PostgreSQL (transacción): INSERT payments + UPDATE/INSERT
+                                        subscriptions (status='active')
+  Backend -> NotificationService: encola email de confirmación
+  Frontend -> Backend: poll/refetch de "mi suscripción" -> refleja Premium
+
+7.5 Login y ciclo de vida del JWT
+--------------------------------------------------------------------------------
+  Usuario -> Frontend: envía credenciales
+  Frontend -> Backend: POST /api/v1/auth/login
+  Backend -> verifica password_hash (bcrypt)
+  Backend -> genera access_token (15 min) + refresh_token (7-30 días)
+  Backend -> PostgreSQL: guarda hash del refresh_token en refresh_tokens
+  Backend -> Frontend: devuelve ambos tokens
+  Frontend -> authStore (Zustand): persiste tokens en memoria (NO en
+                                    localStorage para el access_token, para
+                                    mitigar XSS; ver sección 8)
+  ... (tiempo pasa, access_token expira) ...
+  Frontend -> Backend: petición cualquiera -> 401 Unauthorized
+  Frontend -> Backend: POST /api/v1/auth/refresh (con refresh_token)
+  Backend -> valida hash en refresh_tokens, rota el token (revoca el viejo,
+                                                            emite uno nuevo)
+  Backend -> Frontend: nuevo access_token + nuevo refresh_token
+  Frontend -> reintenta la petición original automáticamente (interceptor)
+
+
+================================================================================
+8. ARQUITECTURA DE SEGURIDAD
+================================================================================
+
+8.1 Autenticación y gestión de sesiones
+---------------------------------------------
+  - JWT firmado (HS256 en MVP; evaluar RS256 si en el futuro hay múltiples
+    servicios verificando tokens de forma independiente, ej. la API pública
+    del Año 2, donde la clave pública puede distribuirse sin exponer la
+    privada).
+  - Almacenamiento del access_token en MEMORIA del frontend (estado de
+    Zustand), nunca en `localStorage`, para reducir superficie de ataque XSS.
+    El refresh_token se entrega como cookie HttpOnly + Secure + SameSite=
+    Strict, inaccesible a JavaScript del navegador, mitigando robo vía XSS.
+  - Hashing de contraseñas con bcrypt, factor de costo 12 (definido en el
+    plan de negocio), nunca SHA-256/MD5 puro para contraseñas.
+
+8.2 Autorización (RBAC + verificación de plan)
+------------------------------------------------------
+  - Verificación en CADA endpoint sensible, nunca confiando únicamente en
+    que el frontend oculte botones (la ocultación de UI es UX, no seguridad;
+    el backend SIEMPRE revalida rol y plan vigente).
+  - Principio de mínimo privilegio: un `teacher` no puede acceder a datos de
+    otra institución; un `institution_admin` solo administra su propia
+    institución (verificado por `institution_id` en cada query, nunca
+    confiando en un ID recibido del cliente sin cruzarlo contra la sesión).
+
+8.3 Protección de datos personales (Ley N.° 29733)
+------------------------------------------------------------
+  - Consentimiento explícito y granular antes de guardar cualquier texto o
+    derivado del mismo más allá de la respuesta HTTP inmediata.
+  - Minimización de datos: `profile_submissions.student_label` es un campo
+    libre opcional, no se exige nombre completo ni documento de identidad
+    del alumno para usar el enlace del docente.
+  - Derecho de acceso/rectificación/cancelación/oposición (ARCO) implementado
+    vía endpoints de autoservicio (`GET/PUT/DELETE /api/v1/users/me`).
+  - Registro de actividad sensible en `audit_logs` (quién accedió a qué,
+    cuándo) como evidencia de cumplimiento ante una eventual auditoría de la
+    Autoridad Nacional de Protección de Datos Personales.
+
+8.4 Validación y sanitización de entradas
+------------------------------------------------
+  - TODA entrada pasa por un esquema Pydantic antes de llegar a la lógica de
+    negocio (tipo, longitud máxima, formato).
+  - Sanitización específica contra XSS en cualquier campo que se renderice
+    como HTML en el futuro (ej. nombre de perfil docente) usando `bleach` en
+    backend, además del escapado automático que React ya aplica por defecto
+    en el frontend (React escapa JSX por defecto, lo que ya mitiga XSS
+    reflejado en la mayoría de los casos, pero no exime de sanitizar en el
+    servidor para datos que se consumen también por la futura API pública).
+  - Prevención de inyección SQL: 100% de las queries vía SQLAlchemy ORM
+    parametrizado; PROHIBIDO concatenar strings SQL manualmente en cualquier
+    parte del código.
+  - Validación estricta de archivos subidos (tamaño, MIME real, ausencia de
+    macros en .docx) descrita en 4.7, para mitigar tanto XSS almacenado como
+    posible ejecución de contenido malicioso.
+
+8.5 Mitigación OWASP Top 10 (resumen aplicado al proyecto)
+------------------------------------------------------------------
+  A01 Broken Access Control      -> RBAC + verificación de pertenencia en
+                                     cada query (8.2).
+  A02 Cryptographic Failures      -> HTTPS obligatorio (Let's Encrypt vía
+                                     Cloudflare/Railway), bcrypt para
+                                     contraseñas, JWT firmado.
+  A03 Injection                   -> ORM parametrizado, Pydantic, bleach.
+  A04 Insecure Design              -> este mismo documento de arquitectura
+                                     y sus ADRs (sección 13).
+  A05 Security Misconfiguration   -> CORS restringido, headers de seguridad
+                                     (CSP, X-Content-Type-Options,
+                                     X-Frame-Options) vía middleware.
+  A06 Vulnerable Components        -> `pip-audit` / `npm audit` en el
+                                     pipeline de CI (9.4), dependabot activo.
+  A07 Identification/Auth Failures-> rotación de refresh tokens, rate limit
+                                     agresivo en /auth/login (5/min).
+  A08 Software/Data Integrity     -> firmas de webhook verificadas
+                                     (pagos), checksums en CI/CD.
+  A09 Logging/Monitoring Failures -> structlog + Sentry + audit_logs (8.3).
+  A10 SSRF                         -> validación estricta de URLs si en el
+                                     futuro se permite "analizar texto desde
+                                     una URL" (feature no presente en MVP,
+                                     pero contemplada en el diseño defensivo).
+
+8.6 Rate limiting y protección frente a DDoS
+---------------------------------------------------
+  - Cloudflare como primera línea de defensa (CDN + WAF + protección DDoS,
+    capa gratuita, tal como define el plan de negocio).
+  - `slowapi` + Redis como segunda línea, a nivel de aplicación: 100
+    solicitudes/minuto por IP por defecto; límites más estrictos en
+    endpoints de autenticación y en el endpoint público de validación de
+    perfiles docentes (que no requiere login y por tanto es más vulnerable a
+    abuso).
+
+8.7 Gestión de secretos
+-------------------------------
+  - Ninguna credencial (claves de Culqi/Stripe, secreto de JWT, cadena de
+    conexión a PostgreSQL) se versiona en Git. Se gestionan vía variables de
+    entorno (`.env` local, nunca commiteado — ver `.gitignore`; en Railway/
+    Vercel se configuran como "Environment Variables" del propio panel del
+    proveedor).
+  - `.env.example` se versiona SIN valores reales, solo como plantilla de
+    qué variables son necesarias.
+  - Rotación periódica de secretos (especialmente el secreto de firma JWT)
+    como práctica recomendada antes del lanzamiento a producción comercial
+    (Fase 3).
+
+
+================================================================================
+9. INFRAESTRUCTURA, ENTORNO DE DESARROLLO EN WINDOWS Y DESPLIEGUE
+================================================================================
+
+9.1 Entorno de desarrollo local en WINDOWS (paso a paso)
+--------------------------------------------------------------
+  Herramientas a instalar (Windows 10/11):
+
+  1. Git para Windows
+     - Descargar de https://git-scm.com/download/win
+     - Durante la instalación, configurar "Checkout as-is, commit Unix-style
+       line endings" o gestionar finales de línea con un archivo
+       `.gitattributes` en la raíz del repositorio (recomendado, ver 9.1.1),
+       para evitar conflictos CRLF/LF al colaborar en equipo.
+
+  2. Python 3.12+ para Windows
+     - Descargar el instalador oficial de https://www.python.org/downloads/
+     - IMPORTANTE: marcar la casilla "Add Python to PATH" durante la
+       instalación.
+     - Verificar en PowerShell:
+         python --version
+         pip --version
+
+  3. Creación del entorno virtual (PowerShell, dentro de la carpeta backend/):
+         python -m venv venv
+         .\venv\Scripts\Activate.ps1
+       (Nota: si PowerShell bloquea la ejecución de scripts, ejecutar una
+        vez como administrador:
+         Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+        y volver a intentar la activación.)
+     - Instalación de dependencias:
+         pip install -r requirements.txt
+         pip install -r requirements-dev.txt
+
+  4. Node.js LTS para Windows
+     - Descargar de https://nodejs.org/ (versión LTS)
+     - Verificar:
+         node --version
+         npm --version
+     - Dentro de la carpeta frontend/:
+         npm install
+         npm run dev
+
+  5. PostgreSQL en Windows — DOS opciones válidas:
+     OPCION A (instalación nativa):
+       - Instalador oficial de https://www.postgresql.org/download/windows/
+         (incluye pgAdmin 4 como cliente gráfico).
+       - Crear la base de datos `wordcountpro_dev` desde pgAdmin o `psql`.
+     OPCION B (recomendada para paridad con producción — vía Docker Desktop):
+       - Instalar Docker Desktop para Windows con backend WSL2 habilitado
+         (https://www.docker.com/products/docker-desktop/). WSL2 se instala
+         automáticamente si no está presente; Docker Desktop gestiona toda
+         la integración, el desarrollador NO necesita usar comandos de Linux
+         directamente.
+       - Levantar Postgres y Redis con un solo comando desde la carpeta
+         backend/ (usando el `docker-compose.yml` descrito en 9.2):
+           docker compose up -d db redis
+       - Esta opción es preferible porque el contenedor de Postgres que se
+         usa en desarrollo es EXACTAMENTE la misma imagen que correrá en
+         producción, eliminando sorpresas de "funciona en mi máquina".
+
+  6. Redis en Windows
+     - Redis ya no distribuye binarios nativos oficiales para Windows desde
+       hace varias versiones. Opciones:
+         a) Vía Docker Desktop (OPCION B del punto 5) — recomendada.
+         b) Memurai (https://www.memurai.com/) — un servidor compatible con
+            el protocolo Redis, nativo para Windows, útil si el desarrollador
+            prefiere no usar Docker en absoluto.
+
+  7. Editor recomendado: Visual Studio Code para Windows, con extensiones:
+     Python (Microsoft), Pylance, ESLint, Prettier, Tailwind CSS IntelliSense,
+     Docker, GitLens.
+
+  8. Variables de entorno locales
+     - Copiar `.env.example` a `.env` en `backend/` y `frontend/`, completando
+       valores de desarrollo (cadena de conexión local a Postgres, claves de
+       prueba/sandbox de Culqi-Stripe, secreto JWT de desarrollo).
+     - `pydantic-settings` carga automáticamente el archivo `.env` al iniciar
+       FastAPI; Vite carga automáticamente `frontend/.env` con prefijo
+       `VITE_*`.
+
+  9. Levantar el backend (PowerShell, dentro de backend/, con el entorno
+     virtual activado):
+         uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+     Documentación interactiva disponible en http://localhost:8000/docs
+
+  10. Levantar el frontend (dentro de frontend/):
+         npm run dev
+      Disponible por defecto en http://localhost:5173
+
+  9.1.1 Notas específicas de compatibilidad Windows
+  ---------------------------------------------------------
+    - Usar siempre `pathlib.Path` en el código Python en lugar de concatenar
+      rutas con "/" o "\" manualmente, para que el mismo código funcione sin
+      cambios si en el futuro se despliega en un contenedor Linux (que es
+      justamente lo que ocurrirá en producción vía Railway).
+    - Configurar un archivo `.gitattributes` en la raíz del repositorio con
+      `* text=auto eol=lf` para normalizar los finales de línea a LF en el
+      repositorio (evitando el ruido de diffs CRLF/LF cuando distintos
+      miembros del equipo colaboran desde Windows), incluso aunque el
+      desarrollo ocurra en Windows.
+    - Los scripts de automatización (ej. limpieza de caché, setup inicial)
+      se escriben preferentemente en Python (multiplataforma) en lugar de
+      `.sh` o `.bat` exclusivos de una plataforma, salvo necesidad
+      específica de Windows (en cuyo caso se documentan como `.ps1`).
+    - Docker Desktop con WSL2 es la pieza clave que permite que, aunque la
+      máquina de desarrollo sea Windows, los CONTENEDORES que se ejecutan
+      localmente sean Linux (idénticos a los de producción en Railway),
+      eliminando la categoría completa de bugs "funciona en Windows pero no
+      en el servidor Linux".
+
+9.2 Contenerización (Docker Desktop para Windows)
+--------------------------------------------------------
+  Ejemplo de `docker-compose.yml` de referencia para desarrollo local (las
+  imágenes base son Linux y corren de forma transparente sobre Docker
+  Desktop/WSL2 en Windows):
+
+    services:
+      db:
+        image: postgres:15-alpine
+        environment:
+          POSTGRES_DB: wordcountpro_dev
+          POSTGRES_USER: wcp_user
+          POSTGRES_PASSWORD: changeme_local_only
+        ports: ["5432:5432"]
+        volumes: ["pgdata:/var/lib/postgresql/data"]
+
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+
+      backend:
+        build: .
+        env_file: .env
+        ports: ["8000:8000"]
+        depends_on: [db, redis]
+        volumes: ["./app:/app/app"]   # hot-reload en desarrollo
+
+    volumes:
+      pgdata:
+
+  - `Dockerfile` del backend basado en `python:3.12-slim` (Linux), multi-
+    stage build (etapa de instalación de dependencias separada de la etapa
+    de runtime) para imágenes finales livianas, importante porque Railway
+    cobra/limita por recursos incluso en el plan starter.
+
+9.3 Entornos (local / staging / producción)
+-------------------------------------------------
+  - LOCAL: Windows + Docker Desktop, datos de prueba, claves sandbox de
+    pagos, sin rate limiting agresivo (para no estorbar el desarrollo).
+  - STAGING (opcional desde Fase 2, recomendado antes de la Fase 3 comercial):
+    una instancia idéntica a producción pero con datos ficticios, usada para
+    validar releases antes de impactar usuarios reales — especialmente
+    importante antes de activar cobros reales con Culqi/Stripe.
+  - PRODUCCION: Railway (backend) + Vercel (frontend) + Supabase/Railway
+    Postgres + Cloudflare (CDN/WAF), tal como define el plan de negocio.
+
+9.4 CI/CD (GitHub Actions)
+---------------------------------
+  Pipeline disparado en cada Pull Request y en cada push a `main`:
+    1. Checkout del código.
+    2. Backend: instalar dependencias, `ruff check`, `mypy`, `pytest --cov`,
+       `pip-audit` (vulnerabilidades conocidas en dependencias).
+    3. Frontend: `npm ci`, `eslint`, `npm run build` (verifica que el build
+       de producción no falle), `vitest run`, `npm audit`.
+    4. Si todo pasa y es push a `main`: despliegue automático (Vercel ya
+       despliega automáticamente desde GitHub por integración nativa;
+       Railway igual, vía su integración nativa con el repositorio).
+    5. Notificación de resultado (éxito/fallo) — opcionalmente a un canal de
+       Discord/Slack del equipo, dado que el plan de negocio menciona una
+       comunidad en Discord.
+  Esto garantiza que ningún error de tipado, de lint o de test crítico llegue
+  a producción, mitigando directamente el riesgo R7 (deuda técnica acumulada)
+  identificado en el plan de negocio.
+
+9.5 Despliegue de producción
+------------------------------------
+  - Frontend: build estático (`npm run build`) servido por Vercel (Edge
+    Network global, despliegue automático por cada push a `main`, preview
+    deployments automáticos por cada Pull Request — útil para que el docente/
+    mentor revise cambios visuales antes de fusionarlos).
+  - Backend: contenedor Docker desplegado en Railway (plan starter,
+    aproximadamente S/30/mes según el plan de negocio), con variables de
+    entorno de producción configuradas en el panel de Railway, no en el
+    código.
+  - Base de datos: PostgreSQL gestionado (Supabase free tier inicialmente,
+    con posibilidad de migrar a Railway Postgres si se requiere mayor
+    control), con backups automáticos diarios.
+  - CDN/seguridad: Cloudflare en modo proxy delante del dominio del frontend
+    y, opcionalmente, del backend, para cacheo de assets estáticos y
+    protección DDoS gratuita.
+  - Dominio: `.pe` adquirido según el presupuesto del plan de negocio
+    (~S/80 el primer año), con DNS gestionado vía Cloudflare.
+
+9.6 Monitoreo y observabilidad
+-------------------------------------
+  - UptimeRobot (capa gratuita): monitoreo de disponibilidad cada 5 minutos
+    sobre el endpoint de salud `/healthz`, con alertas por email/SMS si el
+    servicio cae — soporta directamente el KPI técnico "Disponibilidad >=
+    99.5%".
+  - Sentry (capa gratuita inicial): captura de excepciones no controladas en
+    backend y frontend, con contexto de usuario/request-id para depuración
+    rápida — soporta el KPI "Bugs críticos en producción = 0".
+  - Endpoints de salud dedicados:
+      GET /healthz  -> verifica que el proceso está vivo (liveness)
+      GET /readyz   -> verifica conectividad real a PostgreSQL y Redis
+                       (readiness), útil para que Railway no enrute tráfico
+                       a una instancia que aún no puede atender peticiones.
+  - Logs estructurados (JSON) consultables desde el panel de Railway,
+    correlacionados por request-id para reconstruir el recorrido completo de
+    una petición problemática reportada por un usuario.
+
+9.7 Backups y recuperación ante desastres
+--------------------------------------------------
+  - Backups automáticos diarios de PostgreSQL (retención 7 días) gestionados
+    por el proveedor cloud, complementados a partir de la Fase 3 con un
+    `pg_dump` semanal adicional almacenado en un proveedor distinto (ej. un
+    bucket de almacenamiento independiente), para no depender de un único
+    proveedor ante un incidente mayor (mitiga el riesgo R3 del plan de
+    negocio: "Caída del servicio cloud / downtime").
+  - Plan de recuperación documentado (RTO/RPO objetivo): RPO máximo de 24
+    horas (un backup diario), RTO objetivo menor a 4 horas para restaurar el
+    servicio desde el backup más reciente en un proveedor alternativo si el
+    principal sufre una caída prolongada.
+
+
+================================================================================
+10. ESCALABILIDAD Y RENDIMIENTO
+================================================================================
+
+10.1 Estrategia de caché multinivel
+------------------------------------------
+  Nivel 1 (cliente): Módulo 1 calculado 100% en el navegador, cero llamadas
+  de red.
+  Nivel 2 (CDN/Edge): Cloudflare cachea assets estáticos del frontend
+  (JS/CSS/imágenes) y, potencialmente, respuestas públicas no personalizadas
+  (ej. metadatos de un perfil docente compartido, con TTL corto).
+  Nivel 3 (aplicación): Redis cachea resultados de análisis repetidos
+  (mismo hash de texto) y datos de sesión/rate-limit.
+  Nivel 4 (base de datos): índices adecuados (sección 5.4) y, si se requiere
+  a futuro, vistas materializadas para reportes es agregados
+  que no necesitan ser en tiempo real estricto.
+
+10.2 Escalado horizontal del backend
+-----------------------------------------
+  Gracias al diseño STATELESS (sección 3.3: ninguna instancia guarda estado
+  en memoria), Railway puede escalar el backend a múltiples instancias
+  detrás de un balanceador sin cambios de código, simplemente ajustando el
+  número de réplicas cuando el tráfico lo justifique (Fase 3-4). El rate
+  limiting y las sesiones, al vivir en Redis (compartido entre instancias),
+  siguen siendo consistentes sin importar cuántas instancias del backend
+  estén corriendo.
+
+10.3 Procesamiento asíncrono de tareas pesadas
+-------------------------------------------------------
+  La introducción de Celery (sección 4.11) en la Fase 3 permite que
+  operaciones costosas (exportación de reportes grandes, análisis por lotes
+  de la futura API pública) no bloqueen el ciclo request/response del API
+  principal, preservando el KPI técnico de "tiempo de respuesta < 200ms"
+  para las operaciones interactivas.
+
+10.4 Optimización de consultas y base de datos
+-------------------------------------------------------
+  Revisión periódica de queries lentas (`pg_stat_statements` activado en
+  PostgreSQL) a partir de la Fase 3, cuando el volumen de usuarios (meta:
+  500-850 usuarios activos en el Año 1 según el plan de negocio) empiece a
+  generar patrones de uso reales que el desarrollo inicial no pudo prever
+  completamente.
+
+10.5 Plan de evolución hacia microservicios (Fase 4 - Año 2)
+------------------------------------------------------------------
+  Gracias a los límites de módulo definidos desde el día 1 (sección 3.1), la
+  arquitectura permite EXTRAER servicios independientes cuando el negocio lo
+  justifique, sin reescritura:
+    - El "Motor de Análisis Textual" (services/text_analysis/) es el
+      candidato más natural a convertirse en un microservicio propio cuando
+      se lance la API pública de desarrolladores, ya que su carga de trabajo
+      (CPU-intensiva por el procesamiento NLP) es distinta a la del resto del
+      sistema (I/O-intensiva: usuarios, pagos, planes) y podría beneficiarse
+      de escalar de forma independiente.
+    - El módulo de "Procesamiento de archivos" también es candidato a
+      extraerse como un servicio worker independiente si el volumen de
+      cargas de archivo crece significativamente.
+  Esta extracción se evalúa con datos reales de uso (no especulativamente),
+  siguiendo el principio de "monolito modular primero, microservicios
+  cuando los datos lo justifiquen" — evitando la complejidad prematura que
+  hundiría a un equipo de 1-2 personas en la Fase 1-2.
+
+10.6 Métrica de éxito arquitectónico
+------------------------------------------
+  La arquitectura se considera exitosa si, llegado el Año 2, el equipo puede
+  implementar la API pública, la integración LMS y la app móvil
+  REUTILIZANDO el mismo backend y motor de análisis (vía la misma capa de
+  servicios), sin necesidad de reescribir la lógica de negocio ya validada
+  en producción durante el Año 1.
+
+
+================================================================================
+11. EXTENSIBILIDAD Y VISION FUTURA (API, LMS, MOVIL, IA)
+================================================================================
+
+11.1 API pública para desarrolladores (Año 2)
+------------------------------------------------------
+  - Autenticación vía API Key (tabla `api_keys`), no JWT de usuario, ya que
+    son consumidores máquina-a-máquina (otros sistemas, no personas
+    navegando).
+  - Rate limiting diferenciado por `rate_limit_tier` de la API Key.
+  - Cada request a la API pública registra `words_processed` en
+    `api_usage_logs`, que se agrega mensualmente para generar la facturación
+    por uso (S/0.05 por 1,000 palabras, según el plan de negocio).
+  - Documentación pública autogenerada desde el mismo esquema OpenAPI usado
+    internamente (sección 4.14), reduciendo el esfuerzo de mantenimiento de
+    documentación duplicada.
+
+11.2 Integración con plataformas LMS (Moodle, Canvas)
+----------------------------------------------------------------
+  - Vía LTI (Learning Tools Interoperability) 1.3, el estándar que Moodle y
+    Canvas soportan nativamente para incrustar herramientas externas como
+    WordCount Pro dentro de una tarea del curso.
+  - Alternativamente, vía la API pública (11.1) si la institución prefiere
+    una integración personalizada en lugar de LTI estándar.
+  - El módulo de "Herramientas para Docentes" (teacher_profiles) ya modela
+    el concepto de "perfil de análisis con límites", que es directamente
+    reutilizable como el "assignment" de un LMS.
+
+11.3 Aplicación móvil (React Native, Año 2)
+------------------------------------------------------
+  - Reutiliza el 100% del backend FastAPI existente (los mismos endpoints
+    `/api/v1/...`); no se requiere ningún backend adicional.
+  - Reutiliza parcialmente la lógica de negocio del frontend web si se opta
+    por extraer hooks/validadores puros a un paquete compartido dentro de un
+    monorepo (evaluado en su momento, no necesario para el MVP web actual).
+
+11.4 Módulo de Inteligencia Artificial (análisis de calidad textual, Año 2+)
+--------------------------------------------------------------------------------
+  - Se integra como un nuevo `TextAnalyzer` adicional dentro del mismo
+    Strategy Pattern ya existente (sección 4.4), por ejemplo:
+    `AIStyleSuggestionAnalyzer`, que podría apoyarse en modelos de NLP en
+    español (spaCy más avanzado, o llamadas a un LLM vía API) para sugerir
+    mejoras de estilo o detectar repeticiones semánticas (no solo léxicas).
+  - Al estar ya desacoplado del resto del pipeline, esta es la prueba más
+    clara de que la decisión de usar Strategy Pattern desde el día 1
+    (sección 4.4) paga dividendos directamente en la Fase 4 sin
+    refactorización del código existente.
+
+
+================================================================================
+12. MAPEO ARQUITECTURA <-> FASES DEL PLAN DE NEGOCIO
+================================================================================
+
+  FASE 1 — Académica / MVP (Meses 1-3)
+  -----------------------------------------
+  Se implementa: estructura de carpetas backend/frontend completa, Módulo 1
+  (BasicCounter + ReadingTimeEstimator) corriendo 100% en cliente, esquema
+  inicial de base de datos (users, analyses básico), autenticación JWT
+  básica, despliegue en free tiers de Vercel/Railway/Supabase, CI básico
+  (lint + tests). NO se implementa todavía: Celery, módulo de pagos,
+  herramientas docentes, API pública.
+
+  FASE 2 — Validación (Meses 4-6)
+  --------------------------------------
+  Se añade: sistema de registro/login completo, módulo de historial (90
+  días), corrección de bugs del beta, primeras alianzas con docentes (aún
+  sin el Módulo 4 completo, posiblemente gestionado manualmente al inicio).
+
+  FASE 3 — Comercialización (Meses 7-12)
+  ----------------------------------------------
+  Se añade: Módulo 2 completo (legibilidad, densidad, nube de palabras),
+  Módulo 3 (carga de archivos .docx/.pdf y exportación), integración de
+  pagos Culqi/Stripe y modelo freemium real, Módulo 4 (herramientas
+  docentes) para el lanzamiento del   Redis y Celery para soportar la carga adicional, staging environment antes
+  de activar cobros reales.
+
+  FASE 4 — Escalabilidad (Año 2+)
+  ----------------------------------------
+  Se añade: API pública para desarrolladores, integración LTI con LMS, app
+  móvil React Native, módulo de IA, evaluación de extracción de
+  microservicios según datos reales de uso (sección 10.5), expansión
+  multi-región (Colombia, México).
+
+
+================================================================================
+13. DECISIONES ARQUITECTONICAS (ADR RESUMIDOS)
+================================================================================
+
+  ADR-001: Monolito modular en vez de microservicios para el MVP.
+    Contexto: equipo de 1-2 personas, presupuesto casi nulo.
+    Decisión: un solo servicio FastAPI con módulos de dominio aislados.
+    Consecuencia: menor complejidad operativa ahora; requiere disciplina
+    para no acoplar módulos entre sí, de modo que la extracción futura
+    (Fase 4) sea viable.
+
+  ADR-002: PostgreSQL en vez de una base NoSQL.
+    Contexto: los datos del negocio (usuarios, planes, pagos, análisis) son
+    altamente relacionales y requieren integridad transaccional fuerte
+    (especialmente en pagos y suscripciones).
+    Decisión: PostgreSQL como única base de datos del sistema.
+    Consecuencia: se gana integridad referencial y consultas SQL ricas para
+    reportes; Redis cubre las necesidades de caché/clave-valor que NoSQL
+    típicamente resolvería.
+
+  ADR-003: JWT con refresh token rotation en vez de sesiones de servidor.
+    Contexto: necesidad de escalar horizontalmente el backend sin estado
+    compartido en memoria.
+    Decisión: JWT de corta duración + refresh token rotado en Redis-backed/
+    tabla de base de datos.
+    Consecuencia: backend stateless; mayor complejidad en el manejo de
+    revocación (mitigada con tabla `refresh_tokens` y blacklist en Redis).
+
+  ADR-004: Cálculo del Módulo 1 (conteo básico) en el CLIENTE, no en el
+  backend.
+    Contexto: es la funcionalidad gratuita de mayor uso; el plan de negocio
+    exige "tiempo real" sin fricción.
+    Decisión: tokenización en español replicada en TypeScript en el
+    frontend para el conteo básico; el backend solo participa cuando hay
+    persistencia (historial) o análisis avanzado (Módulo 2).
+    Consecuencia: latencia percibida casi nula y menor costo de
+    infraestructura; requiere mantener sincronizados los casos de prueba de
+    tokenización entre Python y TypeScript.
+
+  ADR-005: FastAPI en vez de Django/Flask.
+    Contexto: se requiere alto rendimiento async para I/O (llamadas a
+    pasarela de pagos, futura integración LMS) y documentación OpenAPI
+    automática para la futura API pública.
+    Decisión: FastAPI sobre ASGI/Uvicorn.
+    Consecuencia: curva de aprendizaje menor que Django para un equipo
+    pequeño orientado a API; se renuncia al admin panel "gratis" de Django
+    (se construye un panel propio mínimo en el frontend React si se
+    necesita).
+
+  ADR-006: TanStack Query + Zustand en vez de Redux.
+    Contexto: equipo pequeño, necesidad de minimizar código repetitivo
+    (boilerplate).
+    Decisión: separar estado de servidor (TanStack Query) de estado de
+    cliente (Zustand).
+    Consecuencia: menos código que Redux clásico, curva de aprendizaje
+    menor, a cambio de tener dos librerías de estado en vez de una sola
+    "fuente de verdad" (se mitiga con convenciones claras de qué vive en
+    cada una, sección 6.4).
+
+  ADR-007: No almacenar el texto original del usuario salvo consentimiento
+  explícito.
+    Contexto: cumplimiento de la Ley N.° 29733 y la cláusula de seguridad
+    del plan de negocio.
+    Decisión: por defecto solo se persisten MÉTRICAS derivadas, nunca el
+    texto/archivo original.
+    Consecuencia: mayor confianza del usuario y menor riesgo legal; limita
+    funcionalidades futuras que requerirían el texto original (ej.
+    "recuperar mi último borrador"), las cuales deberán solicitarse como
+    consentimiento explícito y separado si se implementan.
+
+
+================================================================================
+14. RIESGOS TECNICOS Y MITIGACION (complementa la matriz de riesgos del plan
+    de negocio, sección 12 del Plan de Negocios)
+================================================================================
+
+  Riesgo: Errores de tokenización en español (tildes, eñe, signos ¿¡,
+  palabras compuestas) que dañen la credibilidad del diferenciador clave del
+  producto.
+  Mitigación: suite de pruebas unitarias dedicada exclusivamente a casos
+  límite del español (sección 4.16), revisada antes de cada release.
+
+  Riesgo: Desincronización entre el conteo calculado en cliente (Módulo 1,
+  TypeScript) y el calculado en backend (Python) para el mismo texto.
+  Mitigación: conjunto de "casos de prueba dorados" (golden test cases)
+  automatizado mediante un archivo centralizado `shared/golden_tests.json`
+  en la raíz del repositorio, ejecutado en CI tanto en backend (pytest)
+  como en frontend (vitest), asegurando paridad del 100%.
+
+  Riesgo: Picos de tráfico (ej. viralización en redes sociales, mencionada
+  como canal de marketing) saturando el free tier de Railway/Supabase.
+  Mitigación: Cloudflare absorbe gran parte del tráfico estático; el cálculo
+  del Módulo 1 en cliente reduce drásticamente la carga real sobre el
+  backend incluso si hay un pico masivo de visitantes nuevos.
+
+  Riesgo: Fuga de datos personales o de textos de usuarios (riesgo R5 del
+  plan de negocio).
+  Mitigación: arquitectura de "no almacenamiento por defecto" (ADR-007),
+  HTTPS obligatorio, auditoría vía `audit_logs`, cifrado en tránsito y en
+  reposo (cifrado a nivel de disco gestionado por el proveedor cloud).
+
+  Riesgo: Acoplamiento accidental entre módulos del monolito que impida la
+  futura extracción a microservicios (Fase 4).
+  Mitigación: revisión de código (code review) con checklist explícito de
+  "¿este módulo está accediendo directamente a una tabla de otro módulo sin
+  pasar por su servicio?"; uso de imports controlados/linters de
+  arquitectura (ej. `import-linter` en Python) a partir de la Fase 2.
+
+  Riesgo: Deuda técnica acumulada por la presión de tiempo de un equipo
+  pequeño (riesgo R7 del plan de negocio).
+  Mitigación: CI obligatorio (ruff, mypy, pytest, eslint) que bloquea merges
+  con errores, ADRs documentados (sección 13) para no repetir discusiones de
+  diseño ya resueltas, y cobertura de pruebas mínima exigida en el módulo
+  crítico de análisis textual.
+
+
+================================================================================
+15. CONCLUSIONES
+================================================================================
+
+La arquitectura propuesta para WordCount Pro está deliberadamente diseñada
+para resolver la tensión central del proyecto descrita en el plan de
+negocio: un equipo de 1-2 personas, presupuesto casi nulo, y la ambición de
+construir un producto "de vanguardia" que compita en precisión lingüística
+con herramientas mucho más grandes (Microsoft, Google).
+
+La estrategia de MONOLITO MODULAR con límites de dominio claros, motor de
+análisis textual desacoplado vía Strategy Pattern, cálculo del conteo básico
+en el cliente, y uso exclusivo de free tiers de infraestructura en las fases
+iniciales, permite cumplir los objetivos del plan de negocio (lanzar el MVP
+en el mes 3, alcanzar 500 usuarios activos, ROI del 76.6% en el año 1) sin
+sacrificar la capacidad de escalar técnicamente hacia la visión del Año 2
+(API pública, integración LMS, app móvil, IA).
+
+El entorno de desarrollo en Windows, combinado con Docker Desktop/WSL2 para
+contenerización, garantiza que el desarrollador pueda trabajar cómodamente
+en su sistema operativo de preferencia sin sacrificar la paridad con el
+entorno de producción Linux, eliminando una clase completa de errores de
+"funciona en mi máquina pero no en el servidor".
+
+Finalmente, cada decisión documentada en este plan (y formalizada en los
+ADRs de la sección 13) debe revisitarse al inicio de cada nueva fase del
+roadmap (sección 12), ya que una arquitectura "de vanguardia" no es una foto
+fija sino un proceso vivo de decisiones tomadas con la información disponible
+en cada momento, y revisadas cuando esa información cambia.
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
+
+
+======================================================================
+NUEVAS ACTUALIZACIONES Y MEJORAS IMPLEMENTADAS (VERSIÓN ACTUAL)
+======================================================================
+
+Las siguientes funcionalidades han sido integradas exitosamente en la plataforma, modificando la arquitectura, logica y negocio de la misma para mejorar la experiencia del usuario y las capacidades tecnicas:
+
+1. Unificacion de Roles y Diseno Universal:
+   - Se ha eliminado la estricta separacion entre 'Estudiante' y 'Profesor' en la pantalla de inicio de sesion. Ahora existe un solo tipo de usuario general ('general') para simplificar el acceso.
+   - El diseno se ha redisenado con una estetica Premium (Fondo Morado Pastel, fuentes modernas y sin botones negros).
+
+2. Modulo 'Mis Documentos (Nube)':
+   - Se creo un panel visual especifico en la barra de navegacion para que los usuarios puedan ver y organizar sus documentos.
+   - El sistema guarda todo automaticamente cada 3 segundos en la base de datos y lo presenta en forma de 'Tarjetas' interactivas desde donde se puede recuperar el texto con un clic.
+
+3. Dashboard para Desarrolladores y Consola API:
+   - Se integro un entorno de pruebas (Playground) 100% funcional.
+   - Incluye una Calculadora de Ahorro en tiempo real que compara los costos de consumo frente a OpenAI.
+   - Permite la generacion y revocacion de API Keys seguras para simulacion de entornos de produccion.
+
+4. Motor de Conteo Universal (Unicode):
+   - El algoritmo de deteccion de palabras se ha actualizado con estandares Unicode.
+   - Ahora detecta y cuenta con absoluta precision caracteres alfanumericos, tildes, enies, y vocablos extranjeros.
+
+5. Persistencia de Sesion y Modo Libre:
+   - Persistencia (localStorage): La sesion de usuario sobrevive a recargas de pagina (F5) o cierres de pestana, mejorando la usabilidad.
+   - Modo Libre de Pruebas: El backend ha sido configurado para aceptar cualquier contrasena durante la fase de desarrollo, facilitando pruebas simultaneas entre el equipo.

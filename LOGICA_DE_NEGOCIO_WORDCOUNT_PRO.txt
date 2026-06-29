@@ -1,0 +1,876 @@
+================================================================================
+LOGICA DE NEGOCIO DEL SISTEMA
+WORDCOUNT PRO - SISTEMA DE ANALISIS TEXTUAL INTELIGENTE PARA EL ESPAÑOL
+================================================================================
+
+Elaborado por : Ingeniero de Software (rol de consultoría técnica)
+Versión       : 1.1
+Fecha         : Junio 2026
+Clasificación : Documento Técnico para el Proceso de Desarrollo
+Ciudad        : Pucallpa, Ucayali, Perú
+Fuentes       : PLAN_DE_NEGOCIOS_DE_CONTADOR_DE_PALABRAS123.txt (v2.0)
+                PLAN_DE_ARQUITECTURA_WORDCOUNT_PRO.txt (v1.0)
+
+================================================================================
+INDICE
+================================================================================
+0.  CONTROL DE VERSIONES Y METADATOS
+1.  PROPOSITO Y COMO USAR ESTE DOCUMENTO
+2.  GLOSARIO DE ENTIDADES DEL DOMINIO
+3.  ROLES Y MATRIZ DE PERMISOS (RBAC)
+4.  PLANES, LIMITES Y REGLAS DE MONETIZACION
+5.  LOGICA DE NEGOCIO DEL MOTOR DE ANALISIS TEXTUAL
+6.  LOGICA DE NEGOCIO DE AUTENTICACION Y SESIONES
+7.  LOGICA DE NEGOCIO DE ARCHIVOS Y EXPORTACION DE REPORTES
+8.  LOGICA DE NEGOCIO DE PAGOS Y SUSCRIPCIONES (MAQUINA DE ESTADOS)
+9.  LOGICA DE NEGOCIO DEL MODULO DOCENTE (PERFILES Y VALIDACION)
+10. LOGICA DE NEGOCIO 
+11. LOGICA DE NEGOCIO DEL PROGRAMA DE REFERIDOS
+12. LOGICA DE NEGOCIO DE PRIVACIDAD Y RETENCION DE DATOS (LEY 29733)
+13. LOGICA DE NEGOCIO DE LA API PUBLICA (AÑO 2)
+14. CATALOGO DE EXCEPCIONES DE DOMINIO
+15. FLUJOS DE NEGOCIO CRITICOS (PASO A PASO)
+16. REGLAS DE VALIDACION DE ENTRADA (INPUT)
+17. MATRIZ DE TRAZABILIDAD (REGLA <-> MODULO <-> TABLA)
+18. TRAZABILIDAD CON LOS KPIs DEL PLAN DE NEGOCIO
+19. DECISIONES DE NEGOCIO PENDIENTES (OPEN ITEMS)
+20. ORDEN SUGERIDO DE IMPLEMENTACION PARA EL DESARROLLO
+21. CIERRE
+
+
+================================================================================
+0. CONTROL DE VERSIONES Y METADATOS
+================================================================================
+Versión   Fecha          Autor                    Descripción
+--------  -------------  -----------------------  --------------------------
+1.0       Jun-2026       Ingeniero de Software     Versión inicial, derivada
+                                                    del Plan de Negocios v2.0
+                                                    y el Plan de Arquitectura
+                                                    v1.0.
+1.1       Jun-2026       Ingeniero de Software     Se agrega control de
+                                                    versiones, reglas de
+                                                    validación de contraseña/
+                                                    email/texto vacío, regla
+                                                    anti-fraude de referidos,
+                                                    trazabilidad con KPIs del
+                                                    plan de negocio y sección
+                                                    de decisiones pendientes.
+
+Documentos relacionados:
+- PLAN_DE_NEGOCIOS_DE_CONTADOR_DE_PALABRAS123.txt (fuente funcional/negocio)
+- PLAN_DE_ARQUITECTURA_WORDCOUNT_PRO.txt (fuente técnica/arquitectura)
+- (futuro) ADR-LOG.txt, API_CONTRACT_v1.yaml
+
+
+================================================================================
+1. PROPOSITO Y COMO USAR ESTE DOCUMENTO
+================================================================================
+El Plan de Negocios define QUÉ debe hacer el producto y POR QUÉ (mercado,
+pricing, propuesta de valor). El Plan de Arquitectura define CÓMO se
+construye técnicamente (stack, capas, patrones). Este documento ocupa el
+espacio intermedio que normalmente provoca errores en proyectos académicos
+de un solo desarrollador: las REGLAS DE NEGOCIO explícitas que el código
+debe cumplir, independientemente del framework usado.
+
+Cada regla está numerada (formato BR-XXX) para poder referenciarla desde
+commits, pull requests, tests unitarios y la documentación de la API
+(ej. un test llamado `test_BR014_limite_5000_palabras_plan_gratuito`).
+Esta trazabilidad es la principal defensa contra la deuda técnica (riesgo
+R7 identificado en el Plan de Negocios) y contra la inconsistencia de
+reglas dispersas por el código (riesgo señalado explícitamente en la
+sección 4.4 del Plan de Arquitectura sobre `subscription_service.py`).
+
+Regla de oro para el desarrollo: NINGUNA regla de negocio debe vivir en
+el router/endpoint ni en el componente de React. Toda regla de este
+documento se implementa en la capa de SERVICIO (backend) o, cuando el
+Plan de Arquitectura lo autoriza explícitamente (Módulo 1 gratuito), en
+una función de dominio replicada y testeada en el frontend.
+
+
+================================================================================
+2. GLOSARIO DE ENTIDADES DEL DOMINIO
+================================================================================
+Análisis          : resultado de pasar un texto por el motor de análisis.
+                     Puede ser anónimo (no persiste) o asociado a un usuario
+                     (persiste como métricas, nunca como texto original).
+Usuario anónimo    : visitante sin cuenta que usa el Módulo 1. Se identifica
+                     solo por IP para efectos de rate limiting.
+Plan               : conjunto de permisos y límites vigentes para un usuario
+                     en un momento dado (free, premium_monthly,
+                     premium_annual, institutional, api_developer).
+Suscripción        : registro histórico del plan contratado, con fechas y
+                     estado (active, expired, cancelled, past_due).
+Perfil docente     : conjunto de reglas (min/max palabras) creado por un
+                     docente y publicado mediante un enlace compartible.
+Envío de alumno    : un análisis evaluado contra un perfil docente, con
+                     resultado de cumplimiento (passed_validation).
+Institución        : cuenta paraguas (universidad/colegio) que agrupa
+                     usuarios bajo un plan  compartido.
+Referido           : relación entre un usuario que invita (referrer) y un
+                     usuario invitado (referred), que otorga recompensa.
+Degradación de plan: transición automática de un plan pagado vencido hacia
+                     el plan "free", sin intervención manual.
+
+
+================================================================================
+3. ROLES Y MATRIZ DE PERMISOS (RBAC)
+================================================================================
+Roles de sistema (columna `role` en `users`, más el caso "sin cuenta"):
+
+  anonymous            -> visitante sin registro.
+  free_user            -> cuenta registrada, plan vigente = free.
+  premium_user         -> cuenta registrada, plan vigente = premium (mensual
+                           o anual).
+  teacher               -> cuenta con al menos un perfil docente creado.
+  institution_admin     -> administra una institución y sus miembros.
+  super_admin           -> soporte interno / panel administrativo propio.
+
+REGLA BR-001: el ROL describe identidad funcional (qué tipo de usuario es),
+pero el PLAN VIGENTE describe capacidad de uso (qué puede hacer ahora). Un
+mismo rol "free_user" puede tener distintas capacidades si su suscripción
+cambia de estado. `subscription_service.py` es la ÚNICA fuente de verdad
+para resolver "qué puede hacer este usuario en este momento"; ningún otro
+módulo debe duplicar esta lógica (mitiga el riesgo de fuga de funcionalidad
+premium documentado en el Plan de Arquitectura, sección 4.5).
+
+Matriz de capacidades (resumen funcional, no exhaustiva):
+
+  Capacidad                          | anon | free | premium | teacher | inst.admin
+  ------------------------------------|------|------|---------|---------|----------
+  Análisis Módulo 1 (conteo básico)   |  Sí  |  Sí  |   Sí    |   Sí    |    Sí
+  Análisis Módulo 2 (avanzado)        |  No  |  No  |   Sí    |   Sí*   |    Sí*
+  Historial de análisis guardado      |  No  |  No  |   Sí    |   Sí*   |    Sí*
+  Subir archivos (.docx/.pdf/.odt/.rtf)|  No  |  No  |   Sí    |   Sí*   |    Sí*
+  Exportar reporte PDF/Excel          |  No  |  No  |   Sí    |   Sí*   |    Sí*
+  Crear perfil docente y enlace       |  No  |  No  |   No    |   Sí    |    Sí
+  Panel de administrador |  No  |  No  |   No    |   No    |    Sí
+  Reporte grupal (Módulo 4)           |  No  |  No  |   No    |   No    |    Sí
+
+  (*) "Sí*" significa que la capacidad depende de que el plan vigente del
+  teacher/institution_admin sea al menos premium o ; el rol
+  por sí solo NO otorga la capacidad si la suscripción está vencida.
+
+REGLA BR-002: toda suscripción vencida degrada automáticamente al usuario
+a las capacidades del plan "free" en su PRÓXIMA solicitud al sistema (no
+es necesario un job en tiempo real; basta con que `subscription_service`
+resuelva "plan efectivo" comparando `end_date` contra la fecha actual en
+cada request, y un job batch que sincronice el estado almacenado).
+
+
+================================================================================
+4. PLANES, LIMITES Y REGLAS DE MONETIZACION
+================================================================================
+  Plan            | Precio              | Límite palabras/análisis | Módulos | Historial
+  ----------------|---------------------|---------------------------|---------|----------
+  Gratuito        | S/ 0.00             | 5,000                      | 1       | No persiste
+  Premium mensual | S/ 15.00/mes        | Sin límite                 | 1,2,3   | 90 días
+  Premium anual   | S/ 120.00/año (-33%)| Sin límite                 | 1,2,3   | 90 días
+     | S/ 199.00/mes       | Sin límite                 | 1,2,3,4 | 90 días
+  API Developer   | S/ 0.05 / 1,000 palabras procesadas (Año 2)
+
+REGLA BR-010: el plan Gratuito NO persiste ningún análisis más allá de la
+respuesta HTTP, sin excepción, incluso si el usuario está autenticado. La
+persistencia de historial es un beneficio EXCLUSIVO de planes pagados.
+
+REGLA BR-011: el límite de 5,000 palabras del plan gratuito se valida
+ANTES de ejecutar el pipeline de análisis completo (fail-fast), devolviendo
+un error de dominio `PlanLimitExceededError` (HTTP 402) con el límite
+exacto y el conteo recibido, para que el frontend pueda ofrecer el upgrade
+en el mismo momento de fricción (palanca de conversión free -> premium).
+
+REGLA BR-012: el plan  admite hasta 100 usuarios activos por
+defecto (`institutions.max_users`); superar ese número requiere un cambio
+de plan/tarifa, no debe bloquearse silenciosamente sino devolver un error
+explícito al intentar añadir el miembro 101.
+
+REGLA BR-013: el descuento del plan anual (33%) y el precio 
+son DATOS DE CONFIGURACIÓN, no constantes embebidas en el código — deben
+vivir en una tabla/registro de configuración de planes para poder
+ajustarse sin desplegar código nuevo (alineado a la necesidad de iterar
+precios según el embudo de ventas del Plan de Negocios, sección 9.4).
+
+REGLA BR-014: cuando un usuario premium cancela, conserva las capacidades
+del plan pagado HASTA `end_date` (no se revoca el acceso de inmediato al
+cancelar; se revoca al vencer el período ya pagado).
+
+
+================================================================================
+5. LOGICA DE NEGOCIO DEL MOTOR DE ANALISIS TEXTUAL
+================================================================================
+Este módulo es el diferenciador central del producto ("español nativo") y
+concentra el mayor riesgo de credibilidad si falla.
+
+5.1 Reglas de tokenización (aplican a TODO análisis, sin excepción)
+--------------------------------------------------------------------
+REGLA BR-020: las tildes (á é í ó ú), la eñe (ñ/Ñ) y la diéresis (ü) son
+caracteres válidos de palabra; nunca deben tratarse como separadores ni
+eliminarse en la normalización.
+
+REGLA BR-021: los signos de apertura propios del español (¿ ¡) se cuentan
+y procesan de forma independiente a sus signos de cierre (? !); el sistema
+no debe asumir que todo texto en español los incluye (input real de
+usuarios suele omitirlos), pero si están presentes deben reconocerse
+correctamente sin duplicar el conteo de la oración.
+
+REGLA BR-022: una palabra compuesta con guión (ej. "franco-peruano",
+"bien-estar") cuenta como UNA sola palabra, nunca como dos. Esta regla es
+explícita en el Plan de Negocios (Problema 2) y constituye un caso de
+prueba obligatorio de regresión.
+
+REGLA BR-023: la segmentación de oraciones debe reconocer abreviaturas
+comunes en español (Sr., Sra., Dr., etc., p.ej.) para no cortar una
+oración en un punto que en realidad es parte de una abreviatura.
+
+REGLA BR-024: los saltos de línea de archivos creados en Windows (CRLF) y
+los pegados desde otras fuentes (LF) deben normalizarse antes de contar
+líneas, para que el mismo texto produzca el mismo conteo sin importar su
+origen.
+
+5.2 Reglas de orquestación según plan
+---------------------------------------
+REGLA BR-025: la lista de analizadores que se ejecutan sobre un texto
+depende EXCLUSIVAMENTE del plan efectivo del usuario en el momento de la
+petición (free -> solo Módulo 1; premium/ -> Módulo 1+2,
+más Módulo 3 si hay archivo, más Módulo 4 si es reporte grupal). Esta
+decisión se toma en un único punto (`AnalysisOrchestrator` +
+`subscription_service`), nunca repartida entre varios endpoints.
+
+REGLA BR-026: el cálculo del Módulo 1 (conteo básico) puede ejecutarse en
+el CLIENTE (frontend) para dar la sensación de "tiempo real" exigida por
+el Plan de Negocios, pero el backend debe poder reproducir EXACTAMENTE el
+mismo resultado para el mismo texto (ver "casos de prueba dorados",
+sección 14 del Plan de Arquitectura). Ninguna regla de negocio de límites
+de plan se evalúa nunca en el cliente; el cliente solo replica el cálculo,
+no la autorización.
+
+5.3 Métricas del Módulo 2 (premium)
+---------------------------------------
+REGLA BR-027: el índice de legibilidad usa la fórmula Fernández-Huerta
+(adaptación al español), nunca Flesch-Kincaid en inglés. El CONTRATO del
+servicio es fijo (entrada: texto normalizado; salida: score 0-100 +
+categoría de dificultad); las constantes exactas se validan contra la
+fuente académica antes de cada release que afecte este analizador.
+
+REGLA BR-028: la densidad de palabras clave excluye stopwords en ESPAÑOL
+(lista propia, nunca una lista de stopwords en inglés).
+
+REGLA BR-029: la lista de "muletillas"/palabras de relleno detectadas
+("o sea", "bueno", "entonces", etc.) es CONFIGURABLE en base de datos, no
+hardcodeada, para poder ampliarla sin desplegar código nuevo.
+
+5.4 Modo comparación
+------------------------
+REGLA BR-030: el "modo comparación entre dos textos" ejecuta el pipeline
+completo sobre ambos textos de forma independiente y devuelve un DIFF de
+métricas; no es un analizador distinto, es una composición de dos
+ejecuciones normales del mismo pipeline.
+
+5.5 Lógica de Visión, Voz y Funciones Avanzadas de Escritura (Premium)
+----------------------------------------------------------------------
+REGLA BR-031: el dictado por voz captura el audio en vivo del micrófono
+utilizando la Web Speech API y añade texto normalizado en español de forma
+asíncrona directamente en el lienzo del editor.
+
+REGLA BR-032: el procesamiento de imágenes e imágenes de texto (OCR) extrae
+caracteres locales de archivos .png y .jpg a través de Tesseract.js,
+enviando el resultado de texto plano directamente al editor.
+
+REGLA BR-033: la descripción de dibujos manuscritos por IA actúa si el OCR
+detecta menos de 5 caracteres. En este caso, el motor describe el contenido
+conceptual del dibujo o boceto para contarlo y calificarlo.
+
+REGLA BR-034: el detector de contenido generado por IA calcula la
+variabilidad sintáctica y entropía de longitud de las oraciones. Una
+variabilidad menor a un umbral preestablecido activa una alerta de
+"Sospechoso de ChatGPT".
+
+REGLA BR-035: el copiloto de IA extrae palabras clave para generar un resumen
+ejecutivo de 50 palabras y 3 propuestas de títulos optimizados.
+
+REGLA BR-036: la alerta de keyword stuffing de SEO audita la densidad de
+keywords excluyendo stopwords, levantando una bandera roja si la densidad
+es mayor a 2.5% para evitar penalizaciones en buscadores.
+
+REGLA BR-037: los tiempos de lectura estimados se desglosan en 4 ppm
+(palabras por minuto) distintos: Oratoria (130 ppm), Lectura Normal (200
+ppm), Lectura Académica (150 ppm) y Lectura Infantil (100 ppm).
+
+REGLA BR-038: el generador APA 7 compila datos bibliográficos de entrada
+(autor, año, título, editorial) y formatea la referencia según la norma APA
+de 7ma edición en formato string copiable.
+
+REGLA BR-039: la persistencia del autoguardado e historial de cambios
+respalda el estado del editor en `localStorage` cada 5 segundos, guardando
+las últimas 5 versiones del buffer para permitir su restauración.
+
+
+================================================================================
+6. LOGICA DE NEGOCIO DE AUTENTICACION Y SESIONES
+================================================================================
+REGLA BR-040: el Módulo 1 es accesible de forma ANÓNIMA, sin registro,
+identificando al visitante únicamente por IP para fines de rate limiting
+(100 solicitudes/minuto por IP). Nunca debe exigirse cuenta para esta
+funcionalidad básica, ya que es el diferenciador "sin fricción" del
+producto.
+
+REGLA BR-041: el registro exige email + contraseña; la contraseña se
+almacena exclusivamente como hash bcrypt (factor de costo 12), nunca en
+texto plano ni reversible.
+
+REGLA BR-042: el login emite un `access_token` (JWT, vida corta, 15 min) y
+un `refresh_token` (vida larga, 7-30 días). El `refresh_token` se almacena
+HASHEADO en `refresh_tokens`, nunca en texto plano, para que una fuga de
+la base de datos no permita suplantar sesiones directamente.
+
+REGLA BR-043: cada uso del `refresh_token` lo ROTA (se invalida el
+anterior y se emite uno nuevo). Un intento de reutilizar un
+`refresh_token` ya rotado debe tratarse como señal de robo de token y
+forzar el cierre de TODAS las sesiones del usuario.
+
+REGLA BR-044: el endpoint de login aplica un límite más estricto que el
+general (5 intentos/minuto) para mitigar ataques de fuerza bruta,
+independientemente del límite global de 100 req/min.
+
+REGLA BR-045: el "logout en todos los dispositivos" revoca todos los
+registros de `refresh_tokens` del usuario y agrega el `access_token`
+activo a una lista negra en caché (Redis) hasta su expiración natural.
+
+REGLA BR-046: ningún rol del sistema puede recuperar su contraseña sin
+verificación de identidad por correo electrónico registrado; el flujo de
+reseteo nunca debe revelar si un email existe o no en el sistema (mensaje
+genérico: "si el correo existe, se enviarán instrucciones").
+
+REGLA BR-047: política mínima de contraseña — al menos 8 caracteres,
+combinando letras y números (umbral configurable, no hardcodeado en
+múltiples lugares). Se valida tanto en registro como en cambio de
+contraseña y en el reseteo. Ver decisión pendiente en sección 19.
+
+REGLA BR-048: el email se valida con un formato estándar (RFC simplificado)
+antes de iniciar el registro, y se compara de forma case-insensitive contra
+`users.email` para evitar duplicados (ej. "Ana@mail.com" y "ana@mail.com"
+deben tratarse como el mismo correo).
+
+
+================================================================================
+7. LOGICA DE NEGOCIO DE ARCHIVOS Y EXPORTACION DE REPORTES
+================================================================================
+REGLA BR-050: la carga de archivos (.txt, .docx, .pdf, .odt, .rtf) es una
+capacidad EXCLUSIVA de planes premium/; el plan gratuito y
+los usuarios anónimos solo pueden pegar/escribir texto directamente.
+
+REGLA BR-051: todo archivo subido se valida ANTES de procesarse: tamaño
+máximo (10 MB) y MIME type REAL verificado por contenido ("magic bytes"),
+nunca confiando solo en la extensión del nombre del archivo. Un archivo
+que declara ser .docx pero cuyo contenido real es otro tipo debe
+rechazarse con `InvalidFileFormatError` (HTTP 415).
+
+REGLA BR-052: el archivo original NUNCA se almacena en disco permanente.
+Se procesa en memoria o en un directorio temporal eliminado al finalizar
+la petición. Solo las MÉTRICAS derivadas pueden guardarse en el historial
+del usuario premium, salvo que exista un consentimiento explícito y
+separado para guardar el archivo (funcionalidad no incluida en el alcance
+actual).
+
+REGLA BR-053: un archivo subido se trata como otra FUENTE de texto que
+alimenta el mismo pipeline de análisis del Módulo 1/2; no existe un motor
+de análisis separado para archivos, evitando lógica de negocio duplicada.
+
+REGLA BR-054: la exportación de reportes (PDF/Excel) está disponible solo
+para planes premium/. Reportes grandes o reportes grupales
+es se procesan de forma asíncrona (worker en background) y
+notifican al usuario por correo cuando están listos, para no bloquear la
+respuesta HTTP ni afectar el KPI de tiempo de respuesta < 200 ms.
+
+
+================================================================================
+8. LOGICA DE NEGOCIO DE PAGOS Y SUSCRIPCIONES (MAQUINA DE ESTADOS)
+================================================================================
+Estados posibles de una suscripción (`subscriptions.status`):
+  active -> past_due -> expired
+  active -> cancelled
+
+REGLA BR-060: la tarjeta de pago NUNCA toca el backend propio; el
+checkout solo crea una "intención de pago" y el SDK de Culqi/Stripe en el
+cliente captura los datos sensibles directamente (cumplimiento PCI-DSS
+delegado al proveedor).
+
+REGLA BR-061: cada evento de webhook de pago se identifica de forma única
+por `provider_payment_id` (restricción UNIQUE a nivel de base de datos).
+Si el mismo evento llega más de una vez (común en pasarelas de pago), la
+segunda llamada se IGNORA sin generar efectos duplicados (idempotencia
+obligatoria).
+
+REGLA BR-062: la activación del plan tras un pago exitoso y el registro
+del pago se ejecutan en UNA SOLA transacción atómica (pago + activación de
+suscripción); no puede quedar un pago registrado como exitoso sin que la
+suscripción correspondiente quede activa, ni viceversa.
+
+REGLA BR-063: toda suscripción con `end_date` vencida pasa automáticamente
+a `expired` y el usuario se degrada al plan free, SIN intervención manual.
+Esta transición debe notificarse al usuario por correo (recordatorio de
+vencimiento) antes y/o después del evento.
+
+REGLA BR-064: un pago fallido o rechazado coloca la suscripción en
+`past_due`, NO en `cancelled`; el usuario conserva un período de gracia
+configurable antes de la degradación definitiva a `expired`/`free` (regla
+de negocio a confirmar con el equipo de producto antes de implementarse;
+el contrato de datos ya contempla el estado `past_due` para soportarla).
+Ver decisión pendiente en sección 19.
+
+REGLA BR-065: el plan  se paga y gestiona como una única
+suscripción asociada al `admin_user_id` de la institución, no a cada
+miembro individualmente; los miembros heredan capacidades mientras la
+suscripción  esté activa.
+
+
+================================================================================
+9. LOGICA DE NEGOCIO DEL MODULO DOCENTE (PERFILES Y VALIDACION)
+================================================================================
+REGLA BR-070: solo un usuario con plan premium o  puede crear
+un perfil docente (`teacher_profiles`). Crear un perfil es lo que
+convierte funcionalmente a un usuario en "teacher" a efectos de producto
+(no es un rol que se asigne manualmente).
+
+REGLA BR-071: cada perfil docente define un rango `min_words`/`max_words`
+(ambos opcionales, pero si se definen, `min_words` <= `max_words`). Un
+envío de alumno se valida contra ese rango y produce `passed_validation`
+= true/false.
+
+REGLA BR-072: el enlace compartible de un perfil se resuelve por
+`share_token` (valor opaco único), NUNCA por el `id` interno del perfil,
+para evitar enumeración/IDOR de perfiles de otros docentes.
+
+REGLA BR-073: un perfil inactivo (`is_active = false`) o vencido
+(`expires_at` pasado) deja de aceptar nuevos envíos; los envíos previos ya
+registrados no se eliminan, solo se bloquean nuevas validaciones.
+
+REGLA BR-074: el campo `student_label` de un envío es libre y OPCIONAL; el
+sistema no debe exigir datos personales identificables del alumno para
+registrar un envío (minimización de datos, alineado a la Ley 29733).
+
+REGLA BR-075: cada envío de alumno se asocia a un `analysis_id`; el
+análisis subyacente sigue las mismas reglas de retención de texto que el
+resto del sistema (no se guarda el texto original, solo métricas).
+
+
+================================================================================
+10. LOGICA DE NEGOCIO 
+================================================================================
+REGLA BR-080: una institución tiene un único `admin_user_id` responsable
+de la suscripción y del panel administrativo; la gestión de miembros
+(`institution_members`) es una operación exclusiva de ese rol
+(`institution_admin`).
+
+REGLA BR-081: la relación usuario-institución es única por par
+(restricción `UNIQUE(institution_id, user_id)`): un usuario no puede
+pertenecer dos veces a la misma institución, pero SÍ puede pertenecer a
+instituciones distintas si el negocio lo permite en el futuro.
+
+REGLA BR-082: el reporte grupal del Módulo 4 agrega métricas de múltiples
+análisis de los miembros de la institución; es una vista de SOLO LECTURA
+agregada, nunca debe expedir el texto original de ningún alumno (coherente
+con BR-052/BR-074).
+
+REGLA BR-083: superar el límite de `max_users` (100 por defecto) al
+intentar agregar un nuevo miembro debe rechazarse explícitamente, no
+truncarse silenciosamente.
+
+
+================================================================================
+11. LOGICA DE NEGOCIO DEL PROGRAMA DE REFERIDOS
+================================================================================
+REGLA BR-090: un usuario referido (`referred_user_id`) solo puede tener UN
+referidor en toda su vida en el sistema (restricción UNIQUE); el primer
+referido registrado es el válido, intentos posteriores de "re-referir" al
+mismo usuario se ignoran.
+
+REGLA BR-091: la recompensa (15 días gratis de Premium) se otorga al
+REFERIDOR solo cuando el referido completa la condición de activación
+definida por negocio (ej. primer análisis registrado o primer login
+verificado, a confirmar con el equipo de producto); hasta entonces el
+registro de referido permanece en estado `pending`. Ver decisión
+pendiente en sección 19.
+
+REGLA BR-092: una vez otorgada la recompensa, el estado pasa a `rewarded`
+de forma permanente e inmutable; no se debe poder otorgar la misma
+recompensa dos veces para el mismo registro de referido.
+
+REGLA BR-093 (anti-fraude): un usuario NO puede referirse a sí mismo; el
+sistema valida explícitamente que `referrer_user_id` != `referred_user_id`
+antes de crear el registro. Adicionalmente, se aplican heurísticas básicas
+anti-abuso (ej. mismo dispositivo/IP de registro entre referidor y
+referido dentro de una ventana de tiempo corta) para marcar el referido
+como "sospechoso" y excluirlo de la recompensa automática, dejándolo para
+revisión manual en vez de bloquear el registro por completo. El umbral
+exacto de esta heurística es una decisión pendiente (sección 19).
+
+
+================================================================================
+12. LOGICA DE NEGOCIO DE PRIVACIDAD Y RETENCION DE DATOS (LEY 29733)
+================================================================================
+REGLA BR-100 (regla maestra): por defecto, el sistema NUNCA almacena el
+texto original analizado por un usuario, sin importar su plan. Solo se
+persisten MÉTRICAS derivadas (conteos, scores, palabras clave con
+frecuencia). Cualquier excepción a esta regla requeriría consentimiento
+explícito y separado, fuera del alcance funcional actual.
+
+REGLA BR-101: los análisis de usuarios anónimos o del plan gratuito no se
+persisten más allá de la respuesta HTTP, bajo ninguna circunstancia.
+
+REGLA BR-102: el historial de un usuario premium/ expira
+automáticamente a los 90 días (`analyses.expires_at`); un job programado
+elimina los registros vencidos sin intervención manual.
+
+REGLA BR-103: si un usuario elimina su cuenta (`DELETE /api/v1/users/me`),
+sus datos personales se eliminan o anonimizan en cascada (derechos ARCO de
+la Ley 29733); las métricas agregadas históricas pueden conservarse de
+forma anonimizada (de ahí que `analyses.user_id` use `ON DELETE SET NULL`
+en lugar de `CASCADE`, preservando estadísticas sin vincularlas a una
+persona identificable).
+
+REGLA BR-104: toda comunicación con el sistema ocurre sobre HTTPS
+obligatorio; no existe ningún endpoint que acepte tráfico HTTP plano en
+producción.
+
+REGLA BR-105: toda acción sensible (login fallido, cambio de plan,
+eliminación de cuenta, acceso a panel ) se registra en
+`audit_logs` con marca de tiempo e IP, para trazabilidad ante incidentes.
+
+
+================================================================================
+13. LOGICA DE NEGOCIO DE LA API PUBLICA (AÑO 2 - FASE 4)
+================================================================================
+REGLA BR-110: el acceso a la API pública se autentica por `api_keys`
+(nunca con las credenciales de sesión web del usuario), permitiendo
+revocar el acceso de un integrador sin afectar su cuenta web.
+
+REGLA BR-111: cada solicitud autenticada por API Key registra en
+`api_usage_logs` la cantidad de palabras procesadas; la facturación se
+calcula agregando estos registros por periodo (S/ 0.05 por cada 1,000
+palabras procesadas).
+
+REGLA BR-112: el `rate_limit_tier` de una API Key puede diferir del límite
+estándar de la web (100 req/min); los límites por tier son configuración,
+no constantes de código.
+
+REGLA BR-113: la API pública vive bajo `/api/v1/` (o una versión futura
+`/api/v2/`) para poder evolucionar el contrato sin romper integraciones
+externas ya desplegadas (LMS, plugins de terceros).
+
+
+================================================================================
+14. CATALOGO DE EXCEPCIONES DE DOMINIO
+================================================================================
+Toda regla de negocio que pueda violarse debe expresarse como una
+excepción de dominio explícita, nunca como un `HTTPException` genérico
+disperso por el código:
+
+  PlanLimitExceededError        -> HTTP 402  (BR-011, límite de palabras)
+  InvalidFileFormatError        -> HTTP 415  (BR-051, MIME type inválido)
+  InsufficientPermissionsError  -> HTTP 403  (BR-001/BR-002, rol/plan)
+  DuplicatePaymentEventError    -> (manejo interno, idempotencia BR-061)
+  ProfileNotFoundOrInactive     -> HTTP 404  (BR-073, perfil docente vencido)
+  InstitutionMemberLimitError   -> HTTP 409  (BR-012/BR-083, max_users)
+  AlreadyReferredError          -> HTTP 409  (BR-090, referido único)
+  SelfReferralError             -> HTTP 409  (BR-093, auto-referido)
+  TokenReuseDetectedError       -> HTTP 401  (BR-043, refresh token rotado)
+  InvalidCredentialsFormatError -> HTTP 422  (BR-047/BR-048, password/email)
+  EmptyOrInvalidTextError       -> HTTP 422  (BR-123, texto vacío/sin letras)
+
+
+================================================================================
+15. FLUJOS DE NEGOCIO CRITICOS (PASO A PASO)
+================================================================================
+
+15.1 Análisis anónimo (Módulo 1, sin cuenta)
+---------------------------------------------
+  1. Visitante pega texto en la interfaz.
+  2. Frontend calcula conteo básico localmente (réplica del Módulo 1).
+  3. (Opcional) Frontend envía el texto al backend solo si necesita
+     persistencia o verificación; si no, no hay llamada de red.
+  4. Si hay llamada: middleware de rate limit valida IP (100 req/min).
+  5. `AnalysisOrchestrator` ejecuta solo analizadores de Módulo 1.
+  6. Resultado se devuelve; NO se persiste (BR-101).
+
+15.2 Registro y primer login
+-------------------------------
+  1. Usuario se registra con email + contraseña.
+  2. Se valida formato de email y política de contraseña (BR-047/BR-048).
+  3. Contraseña se hashea con bcrypt costo 12 (BR-041).
+  4. Se envía email de verificación (no bloqueante para usar el Módulo 1).
+  5. Login exitoso devuelve access_token + refresh_token (BR-042).
+  6. Usuario queda en plan "free" por defecto.
+
+15.3 Análisis premium con persistencia de historial
+-------------------------------------------------------
+  1. Usuario autenticado (plan premium vigente) envía texto.
+  2. Se valida que el texto no esté vacío ni sea solo espacios (BR-123).
+  3. `subscription_service` resuelve plan efectivo -> premium.
+  4. `AnalysisOrchestrator` ejecuta Módulo 1 + Módulo 2.
+  5. Resultado se persiste en `analyses` (solo métricas, BR-100) con
+     `expires_at` = now() + 90 días.
+  6. Si el texto coincide (hash SHA-256) con un análisis reciente en
+     caché Redis, se reutiliza el resultado sin recalcular.
+
+15.4 Upgrade de plan (free -> premium)
+--------------------------------------------
+  1. Usuario inicia checkout; backend crea intención de pago (BR-060).
+  2. Frontend captura datos de tarjeta vía SDK de Culqi/Stripe (nunca pasa
+     por el backend propio).
+  3. Pasarela notifica resultado vía webhook firmado.
+  4. Backend valida firma e idempotencia por `provider_payment_id`
+     (BR-061).
+  5. Si es exitoso: transacción atómica que registra el pago y activa la
+     suscripción (BR-062).
+  6. Se envía email de confirmación de pago.
+
+15.5 Degradación automática de plan vencido
+--------------------------------------------------
+  1. Job programado (o resolución on-demand en cada request) detecta
+     `subscriptions.end_date` < hoy y `status = active`.
+  2. Se actualiza `status` a `expired`.
+  3. El usuario pasa a capacidades de plan free en su siguiente petición
+     (BR-063).
+  4. Se envía email de aviso de vencimiento.
+
+15.6 Docente crea perfil y alumno valida su trabajo
+-----------------------------------------------------------
+  1. Docente (plan premium/) crea perfil con min/max palabras
+     (BR-070/BR-071).
+  2. Sistema genera `share_token` único y devuelve enlace público.
+  3. Alumno abre el enlace, pega su texto (sin necesidad de cuenta).
+  4. Sistema ejecuta el análisis, compara contra el rango del perfil y
+     registra `profile_submissions` con `passed_validation`.
+  5. Docente consulta el listado de envíos para su perfil (sin acceso al
+     texto original de cada alumno, solo a las métricas y al resultado).
+
+15.7 Exportación de reporte
+-------------------------------
+  1. Usuario premium/ solicita exportar un análisis existente.
+  2. Si el reporte es pequeño, se genera de forma síncrona (PDF/Excel).
+  3. Si es un reporte grupal  (potencialmente pesado), se
+     delega a un worker asíncrono y se notifica por email al estar listo
+     (BR-054).
+
+15.8 Registro de referido y posible fraude
+-----------------------------------------------
+  1. Usuario nuevo se registra usando un código/enlace de referido.
+  2. Sistema valida `referrer_user_id` != `referred_user_id` (BR-093); si
+     son iguales, se rechaza con `SelfReferralError`.
+  3. Se aplican heurísticas anti-abuso; si el referido es "sospechoso",
+     el registro se crea en `pending` pero se excluye de recompensa
+     automática y se marca para revisión.
+  4. Si el referido es válido y cumple la condición de activación
+     (BR-091), el referidor recibe 15 días gratis de Premium y el estado
+     pasa a `rewarded` (BR-092).
+
+
+================================================================================
+16. REGLAS DE VALIDACION DE ENTRADA (INPUT)
+================================================================================
+REGLA BR-120: toda entrada de usuario se valida con esquemas Pydantic (o
+equivalente) ANTES de tocar la lógica de negocio (fail-fast en el borde);
+ninguna validación de negocio crítica depende de que el frontend haya
+validado correctamente.
+
+REGLA BR-121: el tamaño máximo de texto pegado/escrito y el tamaño máximo
+de archivo (10 MB) se validan antes de iniciar cualquier procesamiento
+costoso (tokenización, parsing de archivo), para evitar ataques de
+denegación de servicio por payloads desproporcionados.
+
+REGLA BR-122: todo input que se vaya a renderizar en el frontend o a
+incluir en consultas SQL se trata como no confiable por defecto
+(sanitización contra XSS, uso exclusivo de queries parametrizadas/ORM
+contra inyección SQL).
+
+REGLA BR-123: un texto vacío, compuesto solo por espacios en blanco, o que
+no contenga ningún carácter alfabético se rechaza ANTES de ejecutar el
+pipeline de análisis, devolviendo un mensaje claro (`EmptyOrInvalidTextError`)
+en vez de un resultado ambiguo de "0 palabras".
+
+REGLA BR-124: la contraseña (BR-047) y el email (BR-048) se validan en el
+borde de la API, antes de cualquier operación de persistencia o de
+verificación contra la base de datos, devolviendo `InvalidCredentialsFormatError`
+con detalle de qué regla específica no se cumplió (sin revelar si el email
+ya existe, ver BR-046).
+
+
+================================================================================
+17. MATRIZ DE TRAZABILIDAD (REGLA <-> MODULO <-> TABLA)
+================================================================================
+  Regla(s)         | Módulo funcional        | Tabla(s) principales
+  -----------------|--------------------------|---------------------------
+  BR-001 a BR-002  | Autorización / Planes     | users, subscriptions
+  BR-010 a BR-014  | Planes y monetización     | subscriptions, institutions
+  BR-020 a BR-030  | Motor de análisis textual | analyses, analysis_keywords
+  BR-040 a BR-048  | Autenticación              | users, refresh_tokens
+  BR-050 a BR-054  | Archivos y reportes        | analyses
+  BR-060 a BR-065  | Pagos y suscripciones      | payments, subscriptions
+  BR-070 a BR-075  | Módulo docente             | teacher_profiles,
+                   |                            | profile_submissions
+  BR-080 a BR-083  |               | institutions,
+                   |                            | institution_members
+  BR-090 a BR-093  | Referidos                  | referrals
+  BR-100 a BR-105  | Privacidad / retención     | analyses, audit_logs
+  BR-110 a BR-113  | API pública (Año 2)        | api_keys, api_usage_logs
+  BR-120 a BR-124  | Validación de entrada      | (transversal, sin tabla
+                   |                            | propia)
+
+
+================================================================================
+18. TRAZABILIDAD CON LOS KPIs DEL PLAN DE NEGOCIO
+================================================================================
+Cada regla de negocio existe para sostener una meta medible del Plan de
+Negocios (sección 14). Este cruce ayuda a justificar, ante el docente o
+mentor técnico, por qué cada regla importa y no es burocracia innecesaria.
+
+  KPI del Plan de Negocios                  | Reglas que lo sostienen
+  --------------------------------------------|------------------------------
+  Tasa de conversión free->premium >= 5%     | BR-011, BR-013, BR-050,
+                                              | BR-054 (fricción visible en
+                                              | el momento justo)
+  Tiempo de respuesta < 200 ms                | BR-026 (cálculo en cliente),
+                                              | BR-054 (export asíncrono)
+  Disponibilidad >= 99.5%                     | BR-002, BR-063 (degradación
+                                              | automática sin intervención
+                                              | manual reduce downtime
+                                              | operativo)
+  Tasa de retención mensual >= 80%            | BR-063 (aviso de
+                                              | vencimiento), BR-091/BR-093
+                                              | (referidos sanos)
+  Bugs críticos en producción = 0             | BR-120 a BR-124 (validación
+                                              | fail-fast), sección 14
+                                              | (catálogo de excepciones)
+  Ingresos mensuales recurrentes >= S/ 975    | BR-010 a BR-014, BR-060 a
+                                              | BR-065
+  NPS >= 40 (confianza/transparencia)         | BR-100 a BR-105 (privacidad,
+                                              | "sin letra pequeña" del Plan
+                                              | de Negocios)
+  Costo de adquisición por cliente <= S/ 8.00 | BR-090 a BR-093 (referidos
+                                              | como canal de bajo costo)
+
+
+================================================================================
+19. DECISIONES DE NEGOCIO PENDIENTES (OPEN ITEMS)
+================================================================================
+Estas reglas tienen un CONTRATO DE DATOS ya definido en el Plan de
+Arquitectura, pero su VALOR EXACTO de negocio aún no está decidido. No
+deben bloquear el desarrollo, pero sí deben resolverse antes de que el
+flujo correspondiente salga a producción real (no solo a demo académica):
+
+  1. BR-064 — Periodo de gracia de "past_due": ¿cuántos días exactos tiene
+     un usuario con pago fallido antes de degradarse a "expired"/"free"?
+     ¿Se reintenta el cobro automáticamente y cuántas veces?
+
+  2. BR-091 — Condición de activación del referido: ¿la recompensa se
+     otorga al primer login verificado, al primer análisis guardado, o al
+     primer pago del referido?
+
+  3. BR-093 — Umbral de la heurística anti-abuso de referidos: ¿qué se
+     considera "mismo dispositivo/IP" y cuál es la ventana de tiempo? Para
+     el MVP académico puede simplificarse a "mismo email de dominio o
+     mismo IP en menos de 5 minutos", pero debe documentarse la decisión
+     final, no dejarse implícita en el código.
+
+  4. BR-012/BR-083 — ¿Qué ocurre cuando una institución excede los 100
+     usuarios? ¿Se ofrece upgrade automático a un tier superior, o se
+     contacta manualmente desde ventas? Afecta si se necesita un tier de
+     precio  adicional.
+
+  5. BR-047 — Longitud y complejidad mínima exacta de contraseña: el valor
+     propuesto (8 caracteres, letras + números) es un punto de partida
+     razonable, pero debe confirmarse si el docente/mentor exige un
+     estándar distinto (ej. OWASP ASVS) para la evaluación académica.
+
+
+================================================================================
+20. ORDEN SUGERIDO DE IMPLEMENTACION PARA EL DESARROLLO
+================================================================================
+Alineado a las fases del Plan de Negocios (sección 15, Hoja de Ruta) y a
+la prioridad de atributos de calidad del Plan de Arquitectura (sección 2):
+
+  Sprint/Etapa 1 (Mes 1-2, Fase 1 académica):
+    - Implementar BR-020 a BR-030 (motor de análisis, sin persistencia).
+    - Implementar BR-040, BR-041, BR-047, BR-048 (registro/login básico
+      con validación de credenciales, sin recuperación de contraseña
+      todavía).
+    - Implementar BR-123 (rechazo de texto vacío) junto con el motor, ya
+      que comparten la misma capa de validación de entrada.
+    - Suite de pruebas de tokenización en español (casos límite) ANTES de
+      seguir avanzando: es el riesgo técnico #1 del proyecto.
+
+  Sprint/Etapa 2 (Mes 3-4, Fase 1-2 MVP/beta):
+    - BR-042 a BR-046 (JWT, refresh rotation, rate limiting de login).
+    - BR-010, BR-011, BR-101 (límite de plan gratuito, no persistencia
+      de análisis free).
+    - BR-100, BR-102, BR-103 (reglas de privacidad, base del cumplimiento
+      legal, deben existir ANTES de lanzar beta pública).
+
+  Sprint/Etapa 3 (Mes 5-6, Fase 2-3 freemium y pagos):
+    - BR-060 a BR-065 (pagos, idempotencia, máquina de estados de
+      suscripción). Resolver decisión pendiente #1 antes de cerrar BR-064.
+    - BR-050 a BR-054 (archivos y exportación), reservado a planes
+      pagados.
+
+  Sprint/Etapa 4 (Mes 7-10, Fase 3 comercialización):
+    - BR-070 a BR-075 (módulo docente).
+    - BR-080 a BR-083 (). Resolver decisión pendiente #4.
+    - BR-090 a BR-093 (referidos). Resolver decisiones pendientes #2 y #3.
+
+  Sprint/Etapa 5 (Año 2, Fase 4 escalabilidad):
+    - BR-110 a BR-113 (API pública y facturación por uso).
+
+Cada sprint debe cerrar con pruebas automatizadas que referencien el
+número de regla en el nombre del test (sección 1), de modo que un futuro
+integrante del equipo (Año 2) pueda entender QUÉ regla de negocio protege
+cada test sin tener que leer el código completo.
+
+
+================================================================================
+21. CIERRE
+================================================================================
+Este documento es el puente entre la intención de negocio (Plan de
+Negocios v2.0) y la implementación técnica (Plan de Arquitectura v1.0).
+Debe actualizarse cada vez que una decisión de producto cambie una regla
+aquí descrita, y cada regla nueva debe recibir un número BR-XXX único
+antes de implementarse, para mantener la trazabilidad que evita la
+inconsistencia de reglas dispersas — el riesgo técnico más probable en un
+proyecto desarrollado por un equipo de 1-2 personas bajo presión de
+tiempo.
+
+La sección 19 (Decisiones Pendientes) debe revisarse al cierre de cada
+sprint: cualquier decisión ahí resuelta se convierte en una regla BR-XXX
+definitiva y se elimina de la lista de pendientes, dejando registro de la
+fecha y el motivo de la decisión en el control de versiones (sección 0).
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
+
+
+======================================================================
+NUEVAS ACTUALIZACIONES Y MEJORAS IMPLEMENTADAS (VERSIÓN ACTUAL)
+======================================================================
+
+Las siguientes funcionalidades han sido integradas exitosamente en la plataforma, modificando la arquitectura, logica y negocio de la misma para mejorar la experiencia del usuario y las capacidades tecnicas:
+
+1. Unificacion de Roles y Diseno Universal:
+   - Se ha eliminado la estricta separacion entre 'Estudiante' y 'Profesor' en la pantalla de inicio de sesion. Ahora existe un solo tipo de usuario general ('general') para simplificar el acceso.
+   - El diseno se ha redisenado con una estetica Premium (Fondo Morado Pastel, fuentes modernas y sin botones negros).
+
+2. Modulo 'Mis Documentos (Nube)':
+   - Se creo un panel visual especifico en la barra de navegacion para que los usuarios puedan ver y organizar sus documentos.
+   - El sistema guarda todo automaticamente cada 3 segundos en la base de datos y lo presenta en forma de 'Tarjetas' interactivas desde donde se puede recuperar el texto con un clic.
+
+3. Dashboard para Desarrolladores y Consola API:
+   - Se integro un entorno de pruebas (Playground) 100% funcional.
+   - Incluye una Calculadora de Ahorro en tiempo real que compara los costos de consumo frente a OpenAI.
+   - Permite la generacion y revocacion de API Keys seguras para simulacion de entornos de produccion.
+
+4. Motor de Conteo Universal (Unicode):
+   - El algoritmo de deteccion de palabras se ha actualizado con estandares Unicode.
+   - Ahora detecta y cuenta con absoluta precision caracteres alfanumericos, tildes, enies, y vocablos extranjeros.
+
+5. Persistencia de Sesion y Modo Libre:
+   - Persistencia (localStorage): La sesion de usuario sobrevive a recargas de pagina (F5) o cierres de pestana, mejorando la usabilidad.
+   - Modo Libre de Pruebas: El backend ha sido configurado para aceptar cualquier contrasena durante la fase de desarrollo, facilitando pruebas simultaneas entre el equipo.
